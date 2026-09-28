@@ -1,0 +1,20 @@
+{
+  "name": "@pgpc/gpc-fhir",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GP Connect FHIR STU3 parsing, extraction and synthetic record generation (copied from GP-Connect-Demo — see PROVENANCE.md)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures/*": "./fixtures/*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.8.0"
+  },
+  "devDependencies": {
+    "@types/fhir": "^0.0.42"
+  }
+}

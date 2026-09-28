@@ -1,0 +1,943 @@
+{
+  "resourceType": "Bundle",
+  "id": "8a6d2ae2-d8f0-11e9-8a34-2a2ae2dbcce4",
+  "meta": {
+    "lastUpdated": "2019-09-11T10:06:15+01:00",
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/GPConnect-StructuredRecord-Bundle-1"
+    ]
+  },
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "04603d77-1a4e-4d63-b246-d7504f8bd833",
+        "meta": {
+          "versionId": "1469448000000",
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Patient-1"]
+        },
+        "identifier": [
+          {
+            "extension": [
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-DTR-NHSNumberVerificationStatus-1",
+                "valueCodeableConcept": {
+                  "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-NHSNumberVerificationStatus-1", "code": "01", "display": "Number present and verified" }]
+                }
+              }
+            ],
+            "system": "https://fhir.nhs.uk/Id/nhs-number",
+            "value": "9912003888"
+          }
+        ],
+        "name": [{ "use": "official", "family": "Bloggs", "given": ["Joe"], "prefix": ["Mr"] }],
+        "telecom": [{ "system": "phone", "value": "01454587554", "use": "home" }],
+        "gender": "male",
+        "birthDate": "1974-01-19",
+        "address": [{ "use": "home", "line": ["Trevelyan Square", "Boar Lane", "Leeds"], "postalCode": "LS1 6AE" }],
+        "managingOrganization": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Organization",
+        "id": "db67f447-b30d-442a-8e31-6918d1367eeb",
+        "meta": {
+          "versionId": "636064088090870772",
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Organization-1"]
+        },
+        "identifier": [{ "system": "https://fhir.nhs.uk/Id/ods-organization-code", "value": "C81010" }],
+        "name": "The Moir Medical Centre",
+        "telecom": [{ "system": "phone", "value": "0115 9737320", "use": "work" }],
+        "address": [{ "use": "work", "line": ["Lavender Way", "Nottingham"], "postalCode": "NG90 6LN" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "6c41ebfd-57c3-4162-9d7b-208c171a2fd7",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Practitioner-1"]
+        },
+        "identifier": [{ "system": "https://fhir.nhs.uk/Id/sds-user-id", "value": "G8133438" }],
+        "name": [{ "family": "Hussein", "given": ["Dr Seun"], "prefix": ["Dr"] }],
+        "gender": "female"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "List",
+        "id": "5bc6ddb2-d8f0-11e9-8a34-2a2ae2dbcce4",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-List-1"]
+        },
+        "status": "current",
+        "mode": "snapshot",
+        "title": "Medication List",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "933361000000108", "display": "Medications and medical devices" }]
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "date": "2019-09-11T10:06:15+01:00",
+        "orderedBy": { "coding": [{ "system": "http://hl7.org/fhir/list-order", "code": "event-date" }] },
+        "entry": [
+          { "item": { "reference": "MedicationStatement/791ceb40-db0f-11e9-8a34-2a2ae2dbcce4" } },
+          { "item": { "reference": "MedicationStatement/8e078d04-8312-433a-b6b4-46bf52542b3c" } },
+          { "item": { "reference": "MedicationStatement/5c9a3c74-2bcf-11e7-b228-9e6e3ab6c5a3" } },
+          { "item": { "reference": "MedicationStatement/b1f2e3d4-4c5a-6b7d-8e9f-0a1b2c3d4e5f" } },
+          { "item": { "reference": "MedicationStatement/a6e72cde-3b12-11e7-b228-9e6e3ab6c5a3" } }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "8b339981-e9be-4ad0-b5ea-309a5b5b6ea1",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "http://snomed.info/sct", "code": "763158003", "display": "Medicinal product" },
+            { "system": "https://dmd.nhs.uk", "code": "39720311000001101", "display": "Amoxicillin 500mg capsules" }
+          ],
+          "text": "Amoxicillin 500mg capsules"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "4b89d0c8-8fd6-4b2f-a5dd-7b96ca6b0870",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "https://dmd.nhs.uk", "code": "319775004", "display": "Atorvastatin 20mg tablets" }
+          ],
+          "text": "Atorvastatin 20mg tablets"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "cc5e8c39-e3f8-4f7a-9e2e-b2e9d1d57d89",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "https://dmd.nhs.uk", "code": "318475005", "display": "Ramipril 5mg capsules" }
+          ],
+          "text": "Ramipril 5mg capsules"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fa1e0fa2-b39e-4a22-9b68-0a78ba04ce5c",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "https://dmd.nhs.uk", "code": "323509004", "display": "Metformin 500mg tablets" }
+          ],
+          "text": "Metformin 500mg tablets"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "791ceb40-db0f-11e9-8a34-2a2ae2dbcce4",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-09-01"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescribingAgency-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1", "code": "prescribed-at-gp-practice", "display": "Prescribed at GP practice" }]
+            }
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "repeat", "display": "Repeat" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/b32e43d4-b4b9-11e9-a2a3-2a2ae2dbcce4" }],
+        "status": "active",
+        "medicationReference": { "reference": "Medication/4b89d0c8-8fd6-4b2f-a5dd-7b96ca6b0870" },
+        "taken": "unk",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2018-03-01" },
+        "dateAsserted": "2019-09-01",
+        "dosage": [
+          {
+            "text": "1 tablet at night",
+            "timing": { "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "408949001", "display": "At night" }], "text": "At night" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 1, "unit": "tablet", "system": "http://unitsofmeasure.org", "code": "1" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "b32e43d4-b4b9-11e9-a2a3-2a2ae2dbcce4",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationRepeatInformation-1",
+            "extension": [
+              { "url": "numberOfRepeatPrescriptionsAllowed", "valueUnsignedInt": 12 },
+              { "url": "numberOfRepeatPrescriptionsIssued", "valueUnsignedInt": 6 }
+            ]
+          }
+        ],
+        "status": "active",
+        "intent": "plan",
+        "medicationReference": { "reference": "Medication/4b89d0c8-8fd6-4b2f-a5dd-7b96ca6b0870" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2018-03-01",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "onBehalfOf": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+        },
+        "dispenseRequest": {
+          "validityPeriod": { "start": "2018-03-01" },
+          "numberOfRepeatsAllowed": 12,
+          "quantity": { "value": 28, "unit": "tablet" }
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "8e078d04-8312-433a-b6b4-46bf52542b3c",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-08-15"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescribingAgency-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1", "code": "prescribed-at-gp-practice", "display": "Prescribed at GP practice" }]
+            }
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "repeat-dispensing", "display": "Repeat Dispensing" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/d1b8a441-e7e0-4a89-b891-11ace3fda52b" }],
+        "status": "active",
+        "medicationReference": { "reference": "Medication/cc5e8c39-e3f8-4f7a-9e2e-b2e9d1d57d89" },
+        "taken": "unk",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2017-06-15" },
+        "dateAsserted": "2019-08-15",
+        "note": [{ "text": "Monitor renal function annually. ACE inhibitor for hypertension and diabetic nephroprotection." }],
+        "dosage": [
+          {
+            "text": "1 capsule once daily",
+            "timing": { "code": { "text": "Once daily" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 1, "unit": "capsule", "system": "http://unitsofmeasure.org" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "d1b8a441-e7e0-4a89-b891-11ace3fda52b",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationRepeatInformation-1",
+            "extension": [
+              { "url": "numberOfRepeatPrescriptionsAllowed", "valueUnsignedInt": 6 },
+              { "url": "numberOfRepeatPrescriptionsIssued", "valueUnsignedInt": 3 }
+            ]
+          }
+        ],
+        "status": "active",
+        "intent": "plan",
+        "medicationReference": { "reference": "Medication/cc5e8c39-e3f8-4f7a-9e2e-b2e9d1d57d89" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2017-06-15",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "onBehalfOf": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+        },
+        "dispenseRequest": {
+          "validityPeriod": { "start": "2017-06-15" },
+          "numberOfRepeatsAllowed": 6,
+          "quantity": { "value": 28, "unit": "capsule" }
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "5c9a3c74-2bcf-11e7-b228-9e6e3ab6c5a3",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-07-20"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "prescribed-elsewhere", "display": "Prescribed Elsewhere" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/f2b34b3c-3bf0-11e7-b228-9e6e3ab6c5a3" }],
+        "status": "active",
+        "medicationReference": { "reference": "Medication/fa1e0fa2-b39e-4a22-9b68-0a78ba04ce5c" },
+        "taken": "unk",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2016-04-01" },
+        "dateAsserted": "2019-07-20",
+        "dosage": [
+          {
+            "text": "1 tablet twice daily with meals",
+            "timing": { "code": { "text": "Twice daily" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 1, "unit": "tablet" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "f2b34b3c-3bf0-11e7-b228-9e6e3ab6c5a3",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "status": "active",
+        "intent": "plan",
+        "medicationReference": { "reference": "Medication/fa1e0fa2-b39e-4a22-9b68-0a78ba04ce5c" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2016-04-01",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }
+        },
+        "dispenseRequest": {
+          "quantity": { "value": 56, "unit": "tablet" }
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "med-prednisolone-5mg",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "https://dmd.nhs.uk", "code": "372554009", "display": "Prednisolone 5mg tablets" }
+          ],
+          "text": "Prednisolone 5mg tablets"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "b1f2e3d4-4c5a-6b7d-8e9f-0a1b2c3d4e5f",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-09-05"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "acute", "display": "Acute" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/mr-prednisolone-acute" }],
+        "status": "active",
+        "medicationReference": { "reference": "Medication/med-prednisolone-5mg" },
+        "taken": "unk",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2019-09-05" },
+        "dateAsserted": "2019-09-05",
+        "note": [{ "text": "Reducing course for inflammatory flare. Review in 2 weeks." }],
+        "dosage": [
+          {
+            "text": "4 tablets once daily for 5 days then reduce as directed",
+            "timing": { "code": { "text": "Once daily" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 4, "unit": "tablet" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-prednisolone-acute",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationReference": { "reference": "Medication/med-prednisolone-5mg" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2019-09-05",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "onBehalfOf": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+        },
+        "dispenseRequest": {
+          "quantity": { "value": 28, "unit": "tablet" }
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "a6e72cde-3b12-11e7-b228-9e6e3ab6c5a3",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-02-01"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "acute", "display": "Acute" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/c9e1c1b6-3b12-11e7-b228-9e6e3ab6c5a3" }],
+        "status": "completed",
+        "medicationReference": { "reference": "Medication/8b339981-e9be-4ad0-b5ea-309a5b5b6ea1" },
+        "taken": "y",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2019-01-25", "end": "2019-02-04" },
+        "dateAsserted": "2019-02-01",
+        "dosage": [
+          {
+            "text": "1 capsule three times a day for 10 days",
+            "timing": { "code": { "text": "Three times daily" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 1, "unit": "capsule" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "c9e1c1b6-3b12-11e7-b228-9e6e3ab6c5a3",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "status": "completed",
+        "intent": "order",
+        "medicationReference": { "reference": "Medication/8b339981-e9be-4ad0-b5ea-309a5b5b6ea1" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2019-01-25",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }
+        },
+        "dispenseRequest": {
+          "quantity": { "value": 30, "unit": "capsule" }
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-amoxicillin-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "category": ["medication"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "372687004", "display": "Amoxicillin (substance)" }],
+          "text": "Amoxicillin"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2015-03-14",
+        "onsetDateTime": "2015-03-12",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Widespread urticarial rash within 2 hours of first dose. Patient reports similar reaction to co-amoxiclav — cross-reactivity suspected.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2015-03-14T09:30:00Z"
+        }],
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "271807003", "display": "Skin rash" }] }],
+          "severity": "moderate"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-penicillin-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "category": ["medication"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "764146007", "display": "Penicillin (substance)" }],
+          "text": "Penicillin"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2018-09-22",
+        "onsetDateTime": "2018-09-20",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Patient presented to A&E with anaphylaxis following penicillin V prescription. EpiPen administered. Ensure penicillin allergy prominently flagged — includes all beta-lactams.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2018-09-22T14:15:00Z"
+        }],
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "39579001", "display": "Anaphylaxis" }] }],
+          "severity": "severe"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-peanut-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "unconfirmed",
+        "category": ["food"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "256349002", "display": "Peanut (substance)" }],
+          "text": "Peanut"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2010-05-01",
+        "onsetDateTime": "2010-04-28",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Reported by patient — not formally tested. Symptoms include urticaria and lip swelling after eating peanut butter. Referred to allergy clinic for skin prick testing.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2010-05-01T11:00:00Z"
+        }],
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "126485001", "display": "Urticaria" }] }],
+          "severity": "severe"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-diabetes-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "major", "display": "Major" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "44054006", "display": "Type 2 diabetes mellitus" }],
+          "text": "Type 2 diabetes mellitus"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2012-06-15",
+        "assertedDate": "2012-06-20",
+        "asserter": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-hypertension-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "major", "display": "Major" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "38341003", "display": "Essential hypertension" }],
+          "text": "Essential hypertension"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2010-03-20"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-asthma-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "minor", "display": "Minor" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "195967001", "display": "Asthma" }],
+          "text": "Asthma"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2008-01-10"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-surgery-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "11429006", "display": "Consultation" }], "text": "GP Surgery Consultation" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "type": [{ "coding": [{ "system": "http://hl7.org/fhir/v3/ParticipationType", "code": "PPRF" }] }], "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2024-01-15T09:30:00+00:00", "end": "2024-01-15T09:50:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-telephone-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "401267002", "display": "Telephone triage encounter" }], "text": "Telephone Triage" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2024-03-20T14:15:00+00:00", "end": "2024-03-20T14:25:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-home-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "439708006", "display": "Home visit" }], "text": "Home Visit" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2023-11-05T11:00:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "imm-covid-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Immunization-1"] },
+        "status": "completed",
+        "notGiven": false,
+        "vaccineCode": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "39114911000001105", "display": "COVID-19 mRNA vaccine" }],
+          "text": "COVID-19 mRNA Vaccine (Pfizer-BioNTech)"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "date": "2021-04-12",
+        "primarySource": true,
+        "lotNumber": "EJ6796",
+        "site": { "coding": [{ "system": "http://snomed.info/sct", "code": "368209003", "display": "Right arm" }] },
+        "practitioner": [{ "role": { "coding": [{ "system": "http://hl7.org/fhir/v2/0443", "code": "AP" }] }, "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "imm-flu-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Immunization-1"] },
+        "status": "completed",
+        "notGiven": false,
+        "vaccineCode": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "13762002", "display": "Influenza virus vaccine" }],
+          "text": "Seasonal Influenza Vaccine 2023/24"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "date": "2023-10-25",
+        "primarySource": true,
+        "lotNumber": "FLU2324A",
+        "site": { "coding": [{ "system": "http://snomed.info/sct", "code": "368209003", "display": "Right arm" }] },
+        "practitioner": [{ "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1019431000000105", "display": "HbA1c (haemoglobin A1c) level - IFCC standardised" }],
+          "text": "HbA1c level"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-10",
+        "valueQuantity": { "value": 58, "unit": "mmol/mol", "system": "http://unitsofmeasure.org", "code": "mmol/mol" },
+        "interpretation": { "coding": [{ "system": "http://hl7.org/fhir/v2/0078", "code": "H", "display": "Above high normal" }] },
+        "referenceRange": [{ "low": { "value": 20, "unit": "mmol/mol" }, "high": { "value": 48, "unit": "mmol/mol" }, "text": "20–48 mmol/mol" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-haemoglobin-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1022431000000105", "display": "Haemoglobin concentration" }],
+          "text": "Haemoglobin"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-10",
+        "valueQuantity": { "value": 14.2, "unit": "g/dL", "system": "http://unitsofmeasure.org", "code": "g/dL" },
+        "interpretation": { "coding": [{ "system": "http://hl7.org/fhir/v2/0078", "code": "N", "display": "Normal" }] },
+        "referenceRange": [{ "low": { "value": 13.5, "unit": "g/dL" }, "high": { "value": 17.5, "unit": "g/dL" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "report-hba1c-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-DiagnosticReport-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1019431000000105", "display": "HbA1c level - IFCC standardised" }],
+          "text": "HbA1c"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "issued": "2024-01-10T09:00:00+00:00",
+        "performer": [{ "actor": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" } }],
+        "result": [{ "reference": "Observation/obs-hba1c-001" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "report-fbc-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-DiagnosticReport-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "26604007", "display": "Full blood count" }],
+          "text": "Full blood count"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "issued": "2024-01-10T09:00:00+00:00",
+        "performer": [{ "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "result": [{ "reference": "Observation/obs-haemoglobin-002" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ReferralRequest",
+        "id": "referral-cardiology-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ReferralRequest-1"] },
+        "status": "active",
+        "intent": "order",
+        "priority": "routine",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-02-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "specialty": { "coding": [{ "system": "http://snomed.info/sct", "code": "394579002", "display": "Cardiology" }] },
+        "reasonCode": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "29857009", "display": "Chest pain" }], "text": "Chest pain investigation" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ReferralRequest",
+        "id": "referral-ophthalmology-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ReferralRequest-1"] },
+        "status": "completed",
+        "intent": "order",
+        "priority": "routine",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2023-07-15",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "specialty": { "coding": [{ "system": "http://snomed.info/sct", "code": "394594003", "display": "Ophthalmology" }] },
+        "reasonCode": [{ "text": "Diabetic eye review" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ProcedureRequest",
+        "id": "diary-bp-review-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProcedureRequest-1"] },
+        "status": "active",
+        "intent": "plan",
+        "priority": "routine",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "413473000", "display": "Counselling about hypertension" }],
+          "text": "Blood pressure monitoring review"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-03-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "occurrenceDateTime": "2024-06-01"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ProcedureRequest",
+        "id": "diary-diabetes-review-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProcedureRequest-1"] },
+        "status": "active",
+        "intent": "plan",
+        "priority": "routine",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "413183008", "display": "Diabetes mellitus annual review" }],
+          "text": "Diabetes annual review"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-03-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "occurrenceDateTime": "2024-09-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "coded-bmi-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "60621009", "display": "Body mass index" }],
+          "text": "BMI"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-15",
+        "valueQuantity": { "value": 28.5, "unit": "kg/m2", "system": "http://unitsofmeasure.org", "code": "kg/m2" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "coded-smoking-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "365981007", "display": "Tobacco smoking behaviour - finding" }],
+          "text": "Smoking status"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-15",
+        "valueCodeableConcept": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "266919005", "display": "Never smoked tobacco" }],
+          "text": "Never smoked"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-discharge-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "373942005", "display": "Discharge summary" }],
+          "text": "Discharge summary"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2024-02-14",
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
+        "description": "Cardiology discharge summary following elective angioplasty",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Discharge Summary - Cardiology 14 Feb 2024",
+            "url": "https://spine.example.nhs.uk/documents/doc-discharge-001"
+          }
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-referral-letter-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "306206005", "display": "Referral to service" }],
+          "text": "Referral letter"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2024-03-01",
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
+        "description": "Referral letter to ophthalmology for diabetic eye screening",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Referral Letter - Ophthalmology 01 Mar 2024",
+            "url": "https://spine.example.nhs.uk/documents/doc-referral-letter-001"
+          }
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-outpatient-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "419891008", "display": "Record artifact" }],
+          "text": "Outpatient letter"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2023-11-20",
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
+        "description": "Outpatient clinic letter from diabetology",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Outpatient Letter - Diabetology 20 Nov 2023",
+            "url": "https://spine.example.nhs.uk/documents/doc-outpatient-001"
+          }
+        }]
+      }
+    }
+  ]
+}

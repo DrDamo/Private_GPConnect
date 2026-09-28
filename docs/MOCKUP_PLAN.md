@@ -136,7 +136,10 @@ Private_GPConnect/
 
 ---
 
-## 6. Decisions needed before coding
-1. **Should the provider API be in scope for the mock**, or is the portal alone enough for demos? I recommend a thin API with OpenAPI docs, because Structured data is meant to be consumed by provider systems.
-2. **Demo hosting:** local only, or a hosted URL for stakeholders?
-3. **Fixture provenance:** are the EMIS/TPP bundles in the Demonstrator INT/synthetic and safe to copy?
+## 6. Decisions (28 Sep 2026)
+1. **Provider API:** in scope. Fastify with OpenAPI; Swagger UI at `/api-docs/`.
+2. **Hosting:** a hosted link on Vercel, deployed through the Build Output API (`scripts/build-vercel.mjs`). A persistent database is needed from step 2, because serverless functions are stateless. I propose Postgres in a UK/EU region, e.g. Supabase or Neon, with an in-memory store for tests.
+3. **Fixtures:** all Demonstrator data is dummy data (confirmed by its author).
+
+## 7. Progress
+- [x] **Step 1:** workspace scaffold (npm workspaces: `apps/web`, `apps/api`, `packages/gpc-fhir`), ESLint, TypeScript, Vitest, GitHub Actions CI, and the Vercel build. `gpc-fhir` was copied from the Demonstrator @ `b49223f`, with tests showing the fixtures parse and validate and the builder round-trips.

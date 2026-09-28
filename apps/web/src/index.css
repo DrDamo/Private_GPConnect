@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Deliberately neutral palette: this is not an NHS service, so it must not use
+   NHS identity colours or logos. */
+@theme {
+  --color-brand: #1f4e79;
+  --color-brand-dark: #163a5a;
+  --color-sim: #b45309;
+  --color-sim-bg: #fef3c7;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
