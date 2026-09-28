@@ -1,6 +1,6 @@
 # Private GP Connect Middleware: Delivery Plan
 
-**Status:** Draft v0.1 for discussion. No code yet.
+**Status:** Draft v0.2. Updated with answers to the open questions. No code yet.
 **Date:** 28 September 2026
 
 ---
@@ -22,9 +22,30 @@ This is a middleware service that lets **independent (private) healthcare provid
 These are the risks that could stop the project. Each one should be settled at a **Phase 0 go/no-go gate** before any significant build spend.
 
 ### 2.1 Permitted use of GP Connect by privately funded care: *existential*
-GP Connect is provided for **direct care**. Before building, get written confirmation from NHS England that a provider delivering **privately funded** care, not NHS-commissioned care, is an eligible consumer organisation. The same confirmation should cover access through an intermediary supplier. You will know the policy position better than I do, but **it needs to be in writing** and should also cover the practice-side data sharing arrangements.
+GP Connect is provided for **direct care**. Before building, get written confirmation from NHS England that a provider delivering **privately funded** care, not NHS-commissioned care, is an eligible consumer organisation. The same confirmation should cover access through an intermediary supplier, and the practice-side data sharing arrangements.
 - Ref: GP Connect service overview, https://digital.nhs.uk/services/gp-connect
 - Ref: GP Connect specifications, https://developer.nhs.uk/apis/gpconnect/
+
+**Current position (confirmed):** the policy is uncertain, and **NHS England is not currently granting connections to private providers**. A recent HSSIB report highlighted the safety case for sharing records with private providers. *(Full HSSIB citation to be added.)*
+
+**What this means for the plan:**
+- Treat Phase 0 as a **policy-shaping** exercise, not just a confirmation exercise. Use the HSSIB findings to propose a **controlled pilot**, such as a First of Type or sandbox, run under NHS England oversight. Offer the consent, audit and assurance design as the answer to "how do we make this safe?".
+- Only build up to what can be exercised in **national INT / sandbox environments** until a pilot is agreed. Don't spend on production infrastructure (HSCN, live Spine certificates) before then.
+- Evaluate the patient-mediated route in §2.8 as a **parallel, possibly earlier** way to reach the market.
+
+### 2.8 Alternative route: patient-mediated access (IM1 Patient Facing Services / NHS login)
+Patients can already access their own GP record online, and IM1 **Patient Facing Services (PFS)** lets assured third-party apps retrieve it with the patient's own NHS login credentials. A patient-mediated model, where the patient pulls their own record and chooses to share it with the provider, could:
+- avoid the GP Connect policy blocker
+- make consent **real and patient-driven**, not a gate imposed on the patient
+- reuse the same consent, audit and provider-side components
+
+**Caveats:**
+- IM1 PFS terms of use and pairing assurance must be checked to confirm that provider-initiated or provider-facing use is permitted.
+- What the patient can see depends on the practice's online-access settings, and third-party information may be redacted.
+- The data is less complete and less structured than GP Connect Structured.
+
+**Recommendation:** assess this in Phase 0, alongside the GP Connect route. Design the architecture so that the source adaptor ("GP Connect" or "IM1 PFS") can be swapped.
+- Ref: IM1 interface mechanism, https://digital.nhs.uk/services/gp-it-futures-systems/im1-pairing-integration
 
 ### 2.2 The commercial framing: "pay for access to patient records"
 This phrasing will be read as **selling NHS data**. That is likely to fail with NHS England, the ICO, the BMA/RCGP, practices and the press. Recommendations:
@@ -157,6 +178,28 @@ These run in parallel with the build and are usually the **critical path**, not 
 6. A consent record is created and the audit event is written.
 7. The provider can now make GP Connect calls within that scope.
 
+### 4.4 Target providers and data-minimisation profiles
+The first targets are **direct-care** providers: **private pharmacies, weight management services and medical cannabis clinics**. All three are areas where prescribing without sight of the GP record creates real safety risk. Examples include GLP-1 agonists prescribed to patients with eating disorders or pancreatitis, and cannabis-based products prescribed to patients with psychosis history or interacting medicines.
+
+Access Record Structured lets a consumer request specific clinical areas. The consent screen should show a **fixed profile for each provider type**, not a request for everything. The profiles below are illustrative; the CSO should agree the final contents:
+
+| Provider type | Structured sections (illustrative) | Send Document back to GP |
+|---|---|---|
+| Private pharmacy | Medications, Allergies | Supply / prescription notification |
+| Weight management | Medications, Allergies, Problems, relevant Observations (weight, BMI, HbA1c) | Mandatory: prescribing notification (e.g. GLP-1) |
+| Medical cannabis | Medications, Allergies, Problems (incl. mental health), Consultations (time-limited) | Mandatory: CBPM prescribing notification |
+
+**Send Document is a safety feature, not a nice-to-have.** For these providers, telling the GP what has been prescribed is arguably as important as reading the record. Consider making it a **condition of service** for prescribing providers.
+
+### 4.5 Structured data consumed by provider EPRs
+Structured data is meant to be **consumed**, so it will persist in the provider's system after retrieval. The middleware stays pass-through, but the following controls are needed:
+- **Output format:** offer the **native STU3** response and an **R4 / UK Core** rendering. The R4 conversion comes from the narrowly scoped bridge, which always keeps the dosage free text. Label the R4 rendering as derived.
+- **Provider EPR integration assurance:** each EPR that consumes the API needs a light-touch conformance check, and the provider's **DCB0160** must cover how the data is imported and shown to clinicians.
+- **Provenance:** every resource returned should carry its source (practice ODS, retrieval time), so the provider's record shows where the data came from and how current it is.
+- **Contract:** the provider agreement should restrict use to the consented episode. Secondary use, analytics and marketing must be prohibited, with audit rights.
+
+HTML stays **view-only**. Render it sanitised in the portal, or in a secure embedded viewer inside the provider EPR, with no download, printing restricted and a watermark showing user and time.
+
 ---
 
 ## 5. Suggested technology (non-binding)
@@ -177,14 +220,14 @@ These run in parallel with the build and are usually the **critical path**, not 
 
 | Phase | Scope | Exit criteria | Indicative duration* |
 |---|---|---|---|
-| **0. Discovery & feasibility** | NHS England policy confirmation (§2.1), legal advice on lawful basis and consent, commercial model, stakeholder engagement (BMA/RCGP, 2–3 ICBs/practices), appoint CSO/DPO/SIRO, draft DPIA and hazard log | **Go/no-go gate:** written NHS England position; legal opinion; at least 1 pilot provider and pilot practices willing | 2–3 months |
-| **1. Foundations** | Company IG framework, start DSPT, cloud landing zone, identity for provider users, **audit service built first**, CI/CD with security scanning | DSPT submitted; audit service tested | 2–3 months |
+| **0. Discovery, policy & feasibility** | Pilot proposal to NHS England built on the HSSIB findings (§2.1); feasibility of the IM1 PFS route (§2.8); legal advice on lawful basis and consent, commercial model, stakeholder engagement (BMA/RCGP, 2–3 ICBs/practices), appoint CSO/DPO/SIRO, draft DPIA and hazard log | **Go/no-go gate:** NHS England agrees a pilot for GP Connect, **or** the IM1 PFS route is confirmed viable; legal opinion; at least 1 pilot provider and pilot practices willing | 2–3 months |
+| **1. Foundations** | Review the GP Connect Demonstrator for reuse; company IG framework, start DSPT, cloud landing zone, identity for provider users, **audit service built first**, CI/CD with security scanning | DSPT submitted; audit service tested | 2–3 months |
 | **2. Identity & consent** | PDS FHIR integration, NHS login integration, consent service, patient portal, SMS fallback (if approved) | End-to-end consent working in the sandbox; clinical safety review of consent hazards | 2–3 months |
 | **3. GP Connect Access Record: HTML** | SDS lookup, JWT construction, HTML retrieval and safe rendering (sanitised, no caching) | Passes GP Connect consumer assurance in INT; SCAL submitted | 2–3 months |
 | **4. Send Document** | MESH integration, document packaging, delivery tracking and acknowledgement handling | Assurance passed | 1–2 months |
 | **5. Access Record: Structured** | STU3 parsing, R4 internal mapping, provider API for structured data, medication safety handling | Assurance passed; hazard log updated for data transformation risks | 3–4 months |
 | **6. Pilot (First of Type)** | 1–2 providers, a small cohort of practices, close monitoring, patient feedback | Safety case signed off; pen test remediated; FoT report accepted by NHS England | 3 months |
-| **7. Scale** | Provider self-service onboarding, billing, support desk, 24/7 incident response | — | ongoing |
+| **7. Scale** | Decide single supplier vs platform; provider self-service onboarding, billing, support desk, 24/7 incident response | — | ongoing |
 
 \*These durations are rough and assume a small, experienced team. In practice, **national assurance and onboarding usually take longer than engineering**. Plan for 15–20 months to live pilot.
 
@@ -215,16 +258,27 @@ These run in parallel with the build and are usually the **critical path**, not 
 | Data breach at middleware | Low | Severe | Pass-through design; encryption; pen testing; ISO 27001 |
 | Clinical harm from rendering / mapping errors | Low–Medium | Severe | DCB0129; show HTML unaltered; keep dosage free text |
 | Assurance timelines slip | High | Medium | Start onboarding in Phase 0; engage NHS England early |
+| Consent is coerced ("consent or no prescription") | High | Medium | Explain to the patient that a provider may decline to treat without the record, and why. Consent is not the GDPR lawful basis (§2.3). Monitor refusal rates |
+| Provider sectors under regulatory scrutiny (online GLP-1, cannabis) damage reputation | Medium | High | Onboard only CQC/GPhC-registered providers in good standing, and suspend a provider on regulator action. Publish the list of connected providers |
+| Policy remains closed indefinitely | Medium | High | Pursue the IM1 PFS patient-mediated route in parallel (§2.8) |
 
 ---
 
-## 9. Open questions for you
-1. Has NHS England given any indication on privately funded providers as GP Connect consumers, directly or through an intermediary?
-2. Which provider types are we targeting first (e.g. private GP, diagnostics, surgery, mental health)? The answer affects scope and clinical safety.
-3. Is SMS consent a hard requirement, or can it be limited to a fallback?
-4. Should Structured data be exposed to provider EPRs through an API, or view-only in the portal for the MVP? View-only greatly reduces risk.
-5. Are you aiming to be a single supplier, or a platform other suppliers build on? This changes the assurance model.
-6. Is there reusable scaffolding in the existing GP Connect Demonstrator project?
+## 9. Decisions and answers
+
+| # | Question | Answer | Effect on the plan |
+|---|---|---|---|
+| 1 | NHS England position on private providers | Uncertain; connections not currently being granted. A recent HSSIB report supports sharing | Phase 0 becomes policy-shaping with a pilot proposal (§2.1). IM1 PFS is evaluated as a parallel route (§2.8). No production spend before agreement |
+| 2 | First provider types | Direct care: private pharmacies, weight management, medical cannabis | Fixed data profiles per provider type. Send Document is mandatory for prescribers (§4.4) |
+| 3 | Consent | Patient consent is required to build trust | Kept as a universal gate. NHS login first; SMS fallback with tight controls (§2.4) |
+| 4 | HTML vs Structured | HTML view-only; Structured is consumed | Secure viewer for HTML. API with STU3 and R4 output, plus provider EPR assurance, for Structured (§4.5) |
+| 5 | Single supplier or platform | Undecided | **Recommendation:** build API-first, with the portal as the first client. This keeps the platform option open at little extra cost. Decide at the end of the pilot |
+| 6 | Reuse of the GP Connect Demonstrator | Substantial reuse is possible | Review the Demonstrator at the start of Phase 1 for JWT building, SDS lookup, STU3 parsing and test fixtures. Make it available to this project (e.g. add the repo to the session) |
+
+### Remaining open questions
+1. What is the full reference for the HSSIB report, so it can be cited in the policy proposal?
+2. Is there a senior sponsor in NHS England, or an ICB, who would host a pilot?
+3. Should minors, proxies and patients without NHS login be permanently out of scope for these provider types? I recommend they should be.
 
 ---
 
