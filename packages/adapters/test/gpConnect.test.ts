@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { HtmlSection } from '@pgpc/core'
 import { MIDDLEWARE } from '@pgpc/fixtures'
 import {
   AdapterError,
@@ -20,7 +21,7 @@ const requester = {
 const sds = new MockSds()
 const client = new GpConnectHtmlClient(simulatedGpSystems({ clock: () => NOW }), MIDDLEWARE, () => NOW)
 
-async function fetchSection(nhsNumber: string, ods: string, section: 'SUM' | 'MED' | 'PRB' | 'ALL' | 'ENC' = 'SUM') {
+async function fetchSection(nhsNumber: string, ods: string, section: HtmlSection = 'SUM') {
   const endpoint = (await sds.getGpConnectEndpoint(ods))!
   return client.getCareRecord({ nhsNumber, section, endpoint, requester, traceId: 'trace-1' })
 }
