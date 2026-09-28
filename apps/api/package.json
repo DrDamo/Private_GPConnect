@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@fastify/swagger": "^9.9.0",
+    "@pgpc/core": "*",
+    "@pgpc/store-postgres": "*",
     "fastify": "^5.12.5"
   },
   "devDependencies": {

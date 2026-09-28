@@ -14,6 +14,12 @@ export default defineConfig([
       ecmaVersion: 2023,
       globals: { ...globals.node, ...globals.browser },
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     // Copied verbatim from GP-Connect-Demo (see packages/gpc-fhir/PROVENANCE.md).

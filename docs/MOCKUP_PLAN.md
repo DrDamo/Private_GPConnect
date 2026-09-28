@@ -143,3 +143,12 @@ Private_GPConnect/
 
 ## 7. Progress
 - [x] **Step 1:** workspace scaffold (npm workspaces: `apps/web`, `apps/api`, `packages/gpc-fhir`), ESLint, TypeScript, Vitest, GitHub Actions CI, and the Vercel build. `gpc-fhir` was copied from the Demonstrator @ `b49223f`, with tests showing the fixtures parse and validate and the builder round-trips.
+- [x] **Step 2:** `packages/core`, covering:
+  - the consent lifecycle (request → grant/decline → withdraw/expire), with optimistic concurrency
+  - provider-type data profiles
+  - assurance rules (SMS consent = view-only, 30 days maximum)
+  - the policy decision point, which reports every applicable deny reason and has each one tested
+  - the hash-chained audit log, with HMAC-pseudonymised NHS numbers and tamper detection
+  - a FHIR R4 Consent view
+
+  `packages/store-postgres` persists this to Supabase (project `private-gpconnect-mock`, eu-west-2). The schema is private, and the audit table is append-only through database triggers. The same contract tests run against the in-memory and Postgres stores, the latter using PGlite.
