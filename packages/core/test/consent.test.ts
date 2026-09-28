@@ -53,6 +53,10 @@ describe('createConsentRequest', () => {
     expectConsentError(() => createConsentRequest(requestInput({ scope: scope as never }), NOW), 'invalid-scope')
   })
 
+  it.each(['9692136702', '123', '96921367O1'])('rejects invalid NHS number %s', nhsNumber => {
+    expectConsentError(() => createConsentRequest(requestInput({ nhsNumber }), NOW), 'invalid-nhs-number')
+  })
+
   it.each([0, 181, 1.5])('rejects a duration of %s days', durationDays => {
     expectConsentError(() => createConsentRequest(requestInput({ durationDays }), NOW), 'invalid-duration')
   })

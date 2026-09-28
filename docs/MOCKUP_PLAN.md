@@ -152,3 +152,16 @@ Private_GPConnect/
   - a FHIR R4 Consent view
 
   `packages/store-postgres` persists this to Supabase (project `private-gpconnect-mock`, eu-west-2). The schema is private, and the audit table is append-only through database triggers. The same contract tests run against the in-memory and Postgres stores, the latter using PGlite.
+- [x] **Step 3:** `packages/fixtures` holds the synthetic data:
+  - 15 patients, each covering a scenario: happy path at EMIS and at TPP, weight management, medical cannabis, polypharmacy, S-flag, deceased, under-16, no mobile or NHS login, practice not on GP Connect, recent GP change, confidential items, NHS login at P5 only, and an ambiguous search
+  - 4 practices, with one not enabled for GP Connect
+  - 4 provider organisations, one of them suspended, and their users
+
+  `packages/adapters` provides:
+  - interfaces and simulators for PDS, SDS, NHS login and SMS
+  - PDS responses rendered as FHIR R4 and parsed back through the same mapping a real client will use
+  - NHS login authorisation codes that are signed and stateless, with checks on expiry, redirect URI and nonce, and no NHS number released for P5 accounts
+  - an SMS simulator that is hard-limited to drama-range numbers, with a Postgres-backed outbox
+  - fault injection (timeout, outage, latency) applied to every adapter
+
+  The API adds `/api/sim/*` endpoints for the patient list, the NHS login persona picker and the on-screen phone. The web app has a *Synthetic test patients* page.

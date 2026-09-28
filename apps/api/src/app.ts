@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import swagger from '@fastify/swagger'
+import { simulatorRoutes } from './routes/simulator'
 import { createServices, type Services } from './services'
 
 // Everything the service does is simulated until real adapters exist. Every
@@ -76,6 +77,8 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
       }
     },
   )
+
+  await app.register(simulatorRoutes)
 
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger())
 

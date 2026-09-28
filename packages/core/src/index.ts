@@ -1,4 +1,5 @@
 export * from './types'
+export * from './nhsNumber'
 export * from './profiles'
 export * from './consent'
 export * from './policy'

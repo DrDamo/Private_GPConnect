@@ -1,3 +1,4 @@
+import { isValidNhsNumber } from './nhsNumber'
 import { ASSURANCE_RULES, PROVIDER_PROFILES, REQUEST_TTL_DAYS } from './profiles'
 import type {
   AssuranceLevel,
@@ -51,6 +52,7 @@ export interface ConsentRecord {
 }
 
 export type ConsentErrorCode =
+  | 'invalid-nhs-number'
   | 'invalid-scope'
   | 'invalid-duration'
   | 'invalid-transition'
@@ -86,6 +88,9 @@ export interface ConsentRequestInput {
 }
 
 export function createConsentRequest(input: ConsentRequestInput, now: Date): ConsentRecord {
+  if (!isValidNhsNumber(input.nhsNumber)) {
+    throw new ConsentError('invalid-nhs-number', 'NHS number is not valid')
+  }
   const profile = PROVIDER_PROFILES[input.provider.type]
   const scope = input.scope ?? profile.scope
 

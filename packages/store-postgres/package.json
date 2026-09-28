@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@pgpc/core": "*",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "@pgpc/adapters": "*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8"

@@ -15,6 +15,8 @@ is synthetic.
 | `apps/web` | React + Vite + Tailwind UI (provider, patient, admin, practice views) |
 | `apps/api` | Fastify API for providers; OpenAPI at `/api/openapi.json`, Swagger UI at `/api-docs/` |
 | `packages/core` | Consent lifecycle, provider-type profiles, policy decision point, hash-chained audit log. Pure TypeScript, no I/O |
+| `packages/adapters` | Interfaces to PDS, SDS, NHS login and SMS, their simulators, and fault injection |
+| `packages/fixtures` | Synthetic patients (999-range NHS numbers, drama-range mobiles), practices and provider organisations |
 | `packages/store-postgres` | Postgres/Supabase implementations of the consent and audit stores |
 | `supabase/migrations` | Database schema (private `pgpc` schema, append-only audit table) |
 | `packages/gpc-fhir` | GP Connect STU3 parser, extractors and synthetic record builder, copied from [GP-Connect-Demo](https://github.com/DrDamo/GP-Connect-Demo) (see its `PROVENANCE.md`) |

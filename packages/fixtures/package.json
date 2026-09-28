@@ -1,0 +1,16 @@
+{
+  "name": "@pgpc/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Synthetic patients, GP practices and provider organisations for the simulation",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@pgpc/core": "*"
+  }
+}

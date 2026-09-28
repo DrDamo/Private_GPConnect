@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { AuditLog, verifyChain } from '@pgpc/core'
 import { auditStoreContract, consentRepositoryContract } from '@pgpc/core/testing'
-import { PostgresAuditStore, PostgresConsentRepository } from '../src'
+import { simOutboxContract } from '@pgpc/adapters/testing'
+import { PostgresAuditStore, PostgresConsentRepository, PostgresOutbox } from '../src'
 import { freshDatabase } from './pglite'
 
 auditStoreContract('postgres', async () => new PostgresAuditStore((await freshDatabase()).sql))
 consentRepositoryContract('postgres', async () => new PostgresConsentRepository((await freshDatabase()).sql))
+simOutboxContract('postgres', async () => new PostgresOutbox((await freshDatabase()).sql))
 
 describe('audit_events table is append-only', () => {
   const seeded = async () => {
@@ -51,5 +53,14 @@ describe('consents table constraints', () => {
          values (gen_random_uuid(), 1, 'pending', '123', 'X', now(), '{}')`,
       ),
     ).rejects.toThrow(/consents_nhs_number_check/)
+  })
+})
+
+describe('sim_sms_outbox', () => {
+  it('refuses a number outside the drama range even if the application let one through', async () => {
+    const { db } = await freshDatabase()
+    await expect(
+      db.query("insert into pgpc.sim_sms_outbox (id, sent_at, to_number, body) values (gen_random_uuid(), now(), '07911123456', 'x')"),
+    ).rejects.toThrow(/sim_sms_outbox_to_number_check/)
   })
 })

@@ -1,3 +1,18 @@
+import { createHmac } from 'node:crypto'
+import {
+  InMemoryFaultSource,
+  InMemoryOutbox,
+  MockNhsLogin,
+  MockPds,
+  MockSds,
+  MockSms,
+  withFaults,
+  type NhsLoginAdapter,
+  type PdsAdapter,
+  type SdsAdapter,
+  type SimOutbox,
+  type SmsAdapter,
+} from '@pgpc/adapters'
 import {
   AuditLog,
   ConsentService,
@@ -6,24 +21,48 @@ import {
   type AuditStore,
   type ConsentRepository,
 } from '@pgpc/core'
-import { createPostgresClient, PostgresAuditStore, PostgresConsentRepository } from '@pgpc/store-postgres'
+import {
+  createPostgresClient,
+  PostgresAuditStore,
+  PostgresConsentRepository,
+  PostgresOutbox,
+} from '@pgpc/store-postgres'
+
+export interface Adapters {
+  pds: PdsAdapter
+  sds: SdsAdapter
+  nhsLogin: NhsLoginAdapter
+  sms: SmsAdapter
+}
+
+export interface Simulator {
+  /** Mock NHS login, for the persona picker to issue codes. */
+  nhsLogin: MockNhsLogin
+  outbox: SimOutbox
+  faults: InMemoryFaultSource
+}
 
 export interface Services {
   storeKind: 'memory' | 'postgres'
   audit: AuditLog
   consents: ConsentService
+  adapters: Adapters
+  simulator: Simulator
   /** Cheap connectivity check for /api/health. */
   ping(): Promise<boolean>
   close(): Promise<void>
 }
 
 // Only ever used for the in-memory store (tests, local dev without a DB).
-const DEV_PSEUDONYM_KEY = 'local-development-only-not-a-secret'
+const DEV_SECRET = 'local-development-only-not-a-secret'
 
 export interface ServiceEnv {
   DATABASE_URL?: string
   AUDIT_PSEUDONYM_KEY?: string
 }
+
+/** Derives an independent key for another purpose, so one secret serves both. */
+const deriveKey = (secret: string, purpose: string) => createHmac('sha256', secret).update(purpose).digest('hex')
 
 /**
  * Picks storage from the environment: Postgres when DATABASE_URL is set
@@ -37,7 +76,12 @@ export function createServices(env: ServiceEnv = process.env): Services {
       throw new Error('AUDIT_PSEUDONYM_KEY (at least 32 characters) is required when DATABASE_URL is set')
     }
     const sql = createPostgresClient(env.DATABASE_URL)
-    return assemble('postgres', new PostgresConsentRepository(sql), new PostgresAuditStore(sql), env.AUDIT_PSEUDONYM_KEY, {
+    return assemble({
+      storeKind: 'postgres',
+      repository: new PostgresConsentRepository(sql),
+      auditStore: new PostgresAuditStore(sql),
+      outbox: new PostgresOutbox(sql),
+      secret: env.AUDIT_PSEUDONYM_KEY,
       ping: async () => {
         try {
           await sql.query('select 1')
@@ -49,19 +93,41 @@ export function createServices(env: ServiceEnv = process.env): Services {
       close: () => sql.close(),
     })
   }
-  return assemble('memory', new InMemoryConsentRepository(), new InMemoryAuditStore(), env.AUDIT_PSEUDONYM_KEY || DEV_PSEUDONYM_KEY, {
+  return assemble({
+    storeKind: 'memory',
+    repository: new InMemoryConsentRepository(),
+    auditStore: new InMemoryAuditStore(),
+    outbox: new InMemoryOutbox(),
+    secret: env.AUDIT_PSEUDONYM_KEY || DEV_SECRET,
     ping: async () => true,
     close: async () => {},
   })
 }
 
-function assemble(
-  storeKind: Services['storeKind'],
-  repository: ConsentRepository,
-  auditStore: AuditStore,
-  pseudonymKey: string,
-  lifecycle: Pick<Services, 'ping' | 'close'>,
-): Services {
-  const audit = new AuditLog(auditStore, { pseudonymKey })
-  return { storeKind, audit, consents: new ConsentService({ repository, audit }), ...lifecycle }
+function assemble(parts: {
+  storeKind: Services['storeKind']
+  repository: ConsentRepository
+  auditStore: AuditStore
+  outbox: SimOutbox
+  secret: string
+  ping: Services['ping']
+  close: Services['close']
+}): Services {
+  const audit = new AuditLog(parts.auditStore, { pseudonymKey: parts.secret })
+  const faults = new InMemoryFaultSource()
+  const nhsLogin = new MockNhsLogin({ signingKey: deriveKey(parts.secret, 'sim-nhs-login-signing') })
+  return {
+    storeKind: parts.storeKind,
+    audit,
+    consents: new ConsentService({ repository: parts.repository, audit }),
+    adapters: {
+      pds: withFaults('pds', new MockPds(), ['getPatient', 'search'], faults),
+      sds: withFaults('sds', new MockSds(), ['getGpConnectEndpoint'], faults),
+      nhsLogin: withFaults('nhs-login', nhsLogin, ['exchangeCode'], faults),
+      sms: withFaults('sms', new MockSms(parts.outbox), ['send'], faults),
+    },
+    simulator: { nhsLogin, outbox: parts.outbox, faults },
+    ping: parts.ping,
+    close: parts.close,
+  }
 }
