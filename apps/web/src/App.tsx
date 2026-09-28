@@ -5,6 +5,9 @@ import TestPatients from './pages/TestPatients'
 import Callback from './pages/patient/Callback'
 import ConsentReview from './pages/patient/ConsentReview'
 import PatientHome from './pages/patient/PatientHome'
+import PatientPage from './pages/provider/PatientPage'
+import ProviderHome from './pages/provider/ProviderHome'
+import RecordView from './pages/provider/RecordView'
 import DemoRequest from './pages/sim/DemoRequest'
 import NhsLoginSim from './pages/sim/NhsLoginSim'
 import Phone from './pages/sim/Phone'
@@ -18,6 +21,9 @@ const routes: Route[] = [
   [/^\/patient$/, () => <PatientHome />],
   [/^\/patient\/callback$/, () => <Callback />],
   [/^\/patient\/consent\/([0-9a-fA-F-]{36})$/, ([id]) => <ConsentReview key={id} id={id} />],
+  [/^\/provider$/, () => <ProviderHome />],
+  [/^\/provider\/patient\/(\d{10})$/, ([n]) => <PatientPage key={n} nhsNumber={n} />],
+  [/^\/provider\/record\/([0-9a-fA-F-]{36})$/, ([id]) => <RecordView key={id} consentId={id} />],
   [/^\/sim\/nhs-login$/, () => <NhsLoginSim />],
   [/^\/sim\/phone$/, () => <Phone />],
   [/^\/sim\/request$/, () => <DemoRequest />],
@@ -58,6 +64,9 @@ export default function App() {
             <p className="mt-1 text-white/80">Consent-based access to GP records for independent healthcare providers — working mock-up</p>
           </div>
           <nav className="flex gap-4 text-sm">
+            <Link className="underline" href="/provider">
+              Provider
+            </Link>
             <Link className="underline" href="/patient">
               Patient
             </Link>

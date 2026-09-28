@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { displayName } from '@pgpc/adapters'
+import { providerOrgByOds } from '@pgpc/fixtures'
 import {
   ACTION_LABELS,
   CLINICAL_AREA_LABELS,
@@ -13,6 +14,7 @@ import {
   type AssuranceLevel,
   type AuditEvent,
   type ConsentRecord,
+  type HtmlSection,
 } from '@pgpc/core'
 import { HttpError } from '../errors'
 import {
@@ -122,6 +124,16 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
     case 'consent.withdrawn':
       if (failed) return `An attempt to withdraw consent from ${provider} did not succeed`
       return e.actor.type === 'patient' ? `You withdrew consent from ${provider}` : `${provider}'s access was ended`
+    case 'pds.retrieve':
+    case 'pds.search':
+      return failed ? null : `${provider} looked up your details on the NHS Spine`
+    case 'access.html.view': {
+      const code = e.details?.section as HtmlSection | undefined
+      const part = code && HTML_SECTION_LABELS[code] ? HTML_SECTION_LABELS[code].toLowerCase() : 'GP record'
+      if (e.outcome === 'denied') return `${provider} tried to look at your ${part} but was not allowed`
+      if (failed) return `${provider} tried to look at your ${part} but your GP system could not be reached`
+      return `${provider} looked at your ${part}`
+    }
     default:
       if (e.type.startsWith('access.')) {
         return failed ? `${provider} tried to access your record but was refused` : `${provider} accessed your GP record`
@@ -132,6 +144,10 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
 
 export async function patientRoutes(app: FastifyInstance) {
   const key = app.services.sessionKey
+  app.addHook('onRequest', (_req, reply, done) => {
+    reply.header('Cache-Control', 'no-store')
+    done()
+  })
 
   app.get('/api/patient/session', { schema: { summary: 'Who is signed in, if anyone', tags } }, async req => {
     const session = readSession(req, key)
@@ -416,7 +432,9 @@ export async function patientRoutes(app: FastifyInstance) {
     const byId = new Map(records.map(r => [r.id, r.provider.name]))
     const byOds = new Map(records.map(r => [r.provider.odsCode, r.provider.name]))
     const providerFor = (consentId?: string, ods?: string) =>
-      (consentId && byId.get(consentId)) || (ods && byOds.get(ods)) || 'A healthcare provider'
+      (consentId && byId.get(consentId)) ||
+      (ods && (byOds.get(ods) ?? providerOrgByOds(ods)?.name)) ||
+      'A healthcare provider'
     return events
       .map(e => ({ at: e.recordedAt, outcome: e.outcome, description: describeEvent(e, providerFor), seq: e.seq }))
       .filter((e): e is { at: string; outcome: AuditEvent['outcome']; description: string; seq: number } => e.description !== null)

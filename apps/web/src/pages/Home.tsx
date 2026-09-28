@@ -5,8 +5,9 @@ const personas: Array<{ title: string; description: string; step: number; href?:
   {
     title: 'Provider clinician',
     description:
-      'Find a patient, request consent, then view their GP record and send documents back to the practice.',
+      'Find a patient on PDS, ask for consent, then view their GP record. Sending documents to the GP comes in step 7.',
     step: 5,
+    href: '/provider',
   },
   {
     title: 'Patient',

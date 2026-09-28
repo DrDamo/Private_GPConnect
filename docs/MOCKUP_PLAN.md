@@ -171,3 +171,13 @@ Private_GPConnect/
   - **Decision:** the patient agrees to a versioned, hashed wording, and the server rejects a decision made against out-of-date wording.
   - **Patient dashboard** (NHS login only): lists requests and consents, allows withdrawal, and shows a plain-English access log built from the audit trail.
   - **Simulator pages:** an NHS login persona picker, an on-screen phone, and a demo launcher that stands in for the provider portal.
+- [x] **Step 5:** the provider portal and API.
+  - **Sign-in:** simulated. The real service would use CIS2 or OIDC with MFA. The same token works as a cookie for the portal and as a Bearer token for provider systems.
+  - **Patient search:** PDS search by NHS number, or by demographics with ambiguous matches handled. Providers see only identity details. An S-flag record shows nothing beyond the NHS number.
+  - **Consent management:** request consent, cancel a request, or end access early.
+  - **GP Connect Access Record: HTML:** the request is built to spec (Ssp-* headers and an unsigned JWT with the requesting organisation, practitioner, `directcare` and `requested_record`). A simulated GP system validates it the way a producer would and returns a Composition-based Bundle.
+  - **Placeholder content:** per record profile, including "no data" messages and a confidential-items exclusion banner.
+  - **Access check and audit:** every view goes through the policy decision point and is audited, whether permitted, denied or failed, and it appears in the patient's access log.
+  - **Display:** HTML is sanitised on the server and rendered in a sandboxed iframe (no scripts, no same-origin access) with a viewer watermark. Responses are `no-store`.
+  - **Request inspector:** shows exactly what was sent to the GP system.
+  - **Still to do:** swap the placeholder HTML for real dummy examples.

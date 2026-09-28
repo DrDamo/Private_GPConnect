@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import { STATUS_LABELS } from './format'
+import { PROVIDER_STATUS_LABELS, STATUS_LABELS } from './format'
 
 export function Button({
   variant = 'primary',
@@ -39,7 +39,8 @@ export function SimNote({ children }: { children: ReactNode }) {
   return <div className="rounded border border-dashed border-sim bg-sim-bg p-3 text-sm text-sim">{children}</div>
 }
 
-export function StatusTag({ status }: { status: string }) {
-  const s = STATUS_LABELS[status] ?? { label: status, tone: 'bg-gray-200' }
+export function StatusTag({ status, audience = 'patient' }: { status: string; audience?: 'patient' | 'provider' }) {
+  const base = STATUS_LABELS[status] ?? { label: status, tone: 'bg-gray-200' }
+  const s = audience === 'provider' ? { ...base, label: PROVIDER_STATUS_LABELS[status] ?? base.label } : base
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${s.tone}`}>{s.label}</span>
 }

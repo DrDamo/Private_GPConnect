@@ -1,61 +1,26 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { FastifyInstance, LightMyRequestResponse } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import { buildApp } from '../src/app'
 import { createServices } from '../src/services'
+import { Browser as BrowserBase, createRequest as createRequestFor, latestSms as latestSmsFor, signInWithNhsLogin } from './helpers'
 
 // End-to-end patient journeys through the HTTP API, with a small cookie jar,
 // exactly as the web app drives them.
 
 let app: FastifyInstance
 
+class Browser extends BrowserBase {
+  constructor() {
+    super(app)
+  }
+}
+const createRequest = (userId: string, nhsNumber: string) => createRequestFor(app, userId, nhsNumber)
+const latestSms = (mobile: string) => latestSmsFor(app, mobile)
+
 beforeEach(async () => {
   app = await buildApp({ services: createServices({}) })
   return () => app.close()
 })
-
-class Browser {
-  private jar = new Map<string, string>()
-  private store(res: LightMyRequestResponse) {
-    for (const c of res.cookies as Array<{ name: string; value: string; maxAge?: number; expires?: Date }>) {
-      const expired = c.maxAge === 0 || (c.expires && c.expires.getTime() <= Date.now()) || c.value === ''
-      if (expired) this.jar.delete(c.name)
-      else this.jar.set(c.name, c.value)
-    }
-    return res
-  }
-  private get cookie() {
-    return [...this.jar].map(([k, v]) => `${k}=${v}`).join('; ')
-  }
-  async get(url: string) {
-    return this.store(await app.inject({ method: 'GET', url, headers: { cookie: this.cookie } }))
-  }
-  async post(url: string, payload: unknown = {}) {
-    return this.store(await app.inject({ method: 'POST', url, payload: payload as object, headers: { cookie: this.cookie } }))
-  }
-}
-
-async function createRequest(userId: string, nhsNumber: string) {
-  const res = await app.inject({ method: 'POST', url: '/api/sim/consent-requests', payload: { userId, nhsNumber } })
-  return res
-}
-
-async function signInWithNhsLogin(browser: Browser, sub: string, returnTo = '/patient') {
-  const start = await browser.post('/api/patient/nhs-login/start', { returnTo })
-  const authUrl = new URL(start.json().authorizationUrl, 'http://x')
-  const authorize = await browser.post('/api/sim/nhs-login/authorize', {
-    sub,
-    state: authUrl.searchParams.get('state'),
-    nonce: authUrl.searchParams.get('nonce'),
-    redirectUri: authUrl.searchParams.get('redirect_uri'),
-  })
-  const back = new URL(authorize.json().location, 'http://x')
-  return browser.post('/api/patient/nhs-login/callback', { code: back.searchParams.get('code'), state: back.searchParams.get('state') })
-}
-
-async function latestSms(mobile: string) {
-  const res = await app.inject({ method: 'GET', url: `/api/sim/phone/${mobile}/messages` })
-  return (res.json() as Array<{ body: string }>)[0]?.body ?? ''
-}
 
 describe('consent request (provider side, via the demo launcher)', () => {
   it('creates a pending request and texts the PDS mobile without naming the provider', async () => {

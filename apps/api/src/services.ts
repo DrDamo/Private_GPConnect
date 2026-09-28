@@ -1,12 +1,16 @@
 import { createHmac } from 'node:crypto'
+import { MIDDLEWARE } from '@pgpc/fixtures'
 import {
+  GpConnectHtmlClient,
   InMemoryFaultSource,
   InMemoryOutbox,
   MockNhsLogin,
   MockPds,
   MockSds,
   MockSms,
+  simulatedGpSystems,
   withFaults,
+  type GpConnectHtmlAdapter,
   type NhsLoginAdapter,
   type PdsAdapter,
   type SdsAdapter,
@@ -37,6 +41,7 @@ export interface Adapters {
   sds: SdsAdapter
   nhsLogin: NhsLoginAdapter
   sms: SmsAdapter
+  gpConnectHtml: GpConnectHtmlAdapter
 }
 
 export interface Simulator {
@@ -56,6 +61,8 @@ export interface Services {
   simulator: Simulator
   /** HMAC key for patient session and sign-in state cookies. */
   sessionKey: string
+  /** HMAC key for provider session tokens. */
+  providerSessionKey: string
   /** Cheap connectivity check for /api/health. */
   ping(): Promise<boolean>
   close(): Promise<void>
@@ -134,11 +141,13 @@ function assemble(parts: {
     consentRepository: parts.repository,
     otp: new OtpService({ store: parts.otpStore, key: deriveKey(parts.secret, 'otp-code-hash') }),
     sessionKey: deriveKey(parts.secret, 'patient-session'),
+    providerSessionKey: deriveKey(parts.secret, 'provider-session'),
     adapters: {
       pds: withFaults('pds', new MockPds(), ['getPatient', 'search'], faults),
       sds: withFaults('sds', new MockSds(), ['getGpConnectEndpoint'], faults),
       nhsLogin: withFaults('nhs-login', nhsLogin, ['exchangeCode'], faults),
       sms: withFaults('sms', new MockSms(parts.outbox), ['send'], faults),
+      gpConnectHtml: withFaults('gp-connect', new GpConnectHtmlClient(simulatedGpSystems(), MIDDLEWARE), ['getCareRecord'], faults),
     },
     simulator: { nhsLogin, outbox: parts.outbox, faults },
     ping: parts.ping,

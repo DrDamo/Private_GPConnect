@@ -21,3 +21,10 @@ export const PRACTICES: SimPractice[] = [
 ]
 
 export const practiceByOds = (odsCode: string) => PRACTICES.find(p => p.odsCode === odsCode)
+
+/** This middleware's own identity on the (simulated) Spine. */
+export const MIDDLEWARE = {
+  asid: '900000000999',
+  odsCode: 'SIMMW1',
+  name: 'Private GP Connect middleware (simulated)',
+} as const

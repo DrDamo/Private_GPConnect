@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie'
 import swagger from '@fastify/swagger'
 import { registerErrorHandler } from './errors'
 import { patientRoutes } from './routes/patient'
+import { providerRoutes } from './routes/provider'
 import { simulatorDemoRoutes, simulatorRoutes } from './routes/simulator'
 import { createServices, type Services } from './services'
 
@@ -92,6 +93,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
   await app.register(simulatorRoutes)
   await app.register(simulatorDemoRoutes)
   await app.register(patientRoutes)
+  await app.register(providerRoutes)
 
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger())
 
