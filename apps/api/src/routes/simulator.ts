@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify'
 import { AdapterError, DRAMA_MOBILE_RANGE, nhsLoginPersonas } from '@pgpc/adapters'
-import { ageOn } from '@pgpc/core'
-import { PATIENTS, practiceByOds } from '@pgpc/fixtures'
+import { ageOn, PROVIDER_PROFILES, PROVIDER_TYPE_LABELS } from '@pgpc/core'
+import { PATIENTS, practiceByOds, PROVIDER_ORGS, PROVIDER_USERS, providerOrgByOds, providerUserById } from '@pgpc/fixtures'
+import { HttpError } from '../errors'
+import { requestConsent } from '../flows/requestConsent'
 
 // Endpoints that only exist because this is a simulation: the synthetic patient
 // list, the NHS login persona picker and the on-screen phone. None of these
@@ -84,5 +86,68 @@ export async function simulatorRoutes(app: FastifyInstance) {
       },
     },
     async req => app.services.simulator.outbox.list({ to: req.params.mobile, limit: req.query.limit ?? 20 }),
+  )
+}
+
+/** Demo launcher (until the provider portal exists): act as a simulated provider user. */
+export async function simulatorDemoRoutes(app: FastifyInstance) {
+  app.get(
+    '/api/sim/providers',
+    { schema: { summary: 'Simulated provider organisations and their users', tags } },
+    async () =>
+      PROVIDER_ORGS.map(o => ({
+        ...o,
+        typeLabel: PROVIDER_TYPE_LABELS[o.type],
+        profile: PROVIDER_PROFILES[o.type].scope,
+        users: PROVIDER_USERS.filter(u => u.organisationOdsCode === o.odsCode),
+      })),
+  )
+
+  app.post<{ Body: { userId: string; nhsNumber: string; purpose?: string } }>(
+    '/api/sim/consent-requests',
+    {
+      schema: {
+        summary: 'Demo: create a consent request as a simulated provider user (texts the patient)',
+        tags,
+        body: {
+          type: 'object',
+          required: ['userId', 'nhsNumber'],
+          additionalProperties: false,
+          properties: {
+            userId: { type: 'string', maxLength: 100 },
+            nhsNumber: { type: 'string', pattern: '^[0-9 ]{10,12}$' },
+            purpose: { type: 'string', minLength: 3, maxLength: 200 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const user = providerUserById(req.body.userId)
+      const org = user && providerOrgByOds(user.organisationOdsCode)
+      if (!user || !org) throw new HttpError(404, 'not-found', 'Unknown simulated user')
+      const defaults: Record<string, string> = {
+        pharmacy: 'Checking it is safe to supply a prescription-only medicine',
+        'weight-management': 'Assessment for weight-loss medication',
+        'medical-cannabis': 'Assessment for a cannabis-based medicine',
+      }
+      const result = await requestConsent(app.services, {
+        user,
+        organisation: org,
+        nhsNumber: req.body.nhsNumber.replace(/\s/g, ''),
+        purpose: req.body.purpose ?? defaults[org.type],
+        episodeId: `sim-episode-${crypto.randomUUID().slice(0, 8)}`,
+        origin: `${req.protocol}://${req.host}`,
+        correlationId: String(req.id),
+      })
+      return reply.code(201).send({
+        consentId: result.consent.id,
+        patientName: result.patientName,
+        provider: org.name,
+        status: result.consent.status,
+        requestExpiresAt: result.consent.requestExpiresAt,
+        patientLink: `/patient/consent/${result.consent.id}`,
+        notification: result.notification,
+      })
+    },
   )
 }

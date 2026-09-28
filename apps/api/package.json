@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/swagger": "^9.9.0",
     "@pgpc/adapters": "*",
     "@pgpc/core": "*",

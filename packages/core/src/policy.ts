@@ -60,6 +60,28 @@ export function ageOn(birthDate: string, now: Date): number {
   return age
 }
 
+export type PatientIneligibility = Extract<
+  DenyReason,
+  'patient-restricted' | 'patient-deceased' | 'patient-under-16' | 'patient-age-unknown'
+>
+
+/**
+ * Patients the service must never handle in the MVP (PLAN.md §2.6). Shared by
+ * the consent request flow and the policy decision point so both refuse the
+ * same people for the same reasons.
+ */
+export function patientIneligibility(
+  patient: { restricted: boolean; deceased: boolean; birthDate?: string },
+  now: Date,
+): PatientIneligibility[] {
+  const reasons: PatientIneligibility[] = []
+  if (patient.restricted) reasons.push('patient-restricted')
+  if (patient.deceased) reasons.push('patient-deceased')
+  if (!patient.birthDate) reasons.push('patient-age-unknown')
+  else if (ageOn(patient.birthDate, now) < MIN_PATIENT_AGE) reasons.push('patient-under-16')
+  return reasons
+}
+
 export function decide(req: AccessRequest): AccessDecision {
   const reasons: DenyReason[] = []
   const deny = (r: DenyReason) => reasons.push(r)
@@ -71,10 +93,7 @@ export function decide(req: AccessRequest): AccessDecision {
   if (!req.organisation.active) deny('organisation-inactive')
 
   // About whom
-  if (req.patient.restricted) deny('patient-restricted')
-  if (req.patient.deceased) deny('patient-deceased')
-  if (!req.patient.birthDate) deny('patient-age-unknown')
-  else if (ageOn(req.patient.birthDate, req.now) < MIN_PATIENT_AGE) deny('patient-under-16')
+  reasons.push(...patientIneligibility(req.patient, req.now))
 
   // What for
   if (req.action === 'html.view' && !req.htmlSection) deny('html-section-required')

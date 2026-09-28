@@ -18,13 +18,17 @@ import {
   ConsentService,
   InMemoryAuditStore,
   InMemoryConsentRepository,
+  InMemoryOtpStore,
+  OtpService,
   type AuditStore,
   type ConsentRepository,
+  type OtpStore,
 } from '@pgpc/core'
 import {
   createPostgresClient,
   PostgresAuditStore,
   PostgresConsentRepository,
+  PostgresOtpStore,
   PostgresOutbox,
 } from '@pgpc/store-postgres'
 
@@ -46,8 +50,12 @@ export interface Services {
   storeKind: 'memory' | 'postgres'
   audit: AuditLog
   consents: ConsentService
+  consentRepository: ConsentRepository
+  otp: OtpService
   adapters: Adapters
   simulator: Simulator
+  /** HMAC key for patient session and sign-in state cookies. */
+  sessionKey: string
   /** Cheap connectivity check for /api/health. */
   ping(): Promise<boolean>
   close(): Promise<void>
@@ -81,6 +89,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
       repository: new PostgresConsentRepository(sql),
       auditStore: new PostgresAuditStore(sql),
       outbox: new PostgresOutbox(sql),
+      otpStore: new PostgresOtpStore(sql),
       secret: env.AUDIT_PSEUDONYM_KEY,
       ping: async () => {
         try {
@@ -98,6 +107,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
     repository: new InMemoryConsentRepository(),
     auditStore: new InMemoryAuditStore(),
     outbox: new InMemoryOutbox(),
+    otpStore: new InMemoryOtpStore(),
     secret: env.AUDIT_PSEUDONYM_KEY || DEV_SECRET,
     ping: async () => true,
     close: async () => {},
@@ -109,6 +119,7 @@ function assemble(parts: {
   repository: ConsentRepository
   auditStore: AuditStore
   outbox: SimOutbox
+  otpStore: OtpStore
   secret: string
   ping: Services['ping']
   close: Services['close']
@@ -120,6 +131,9 @@ function assemble(parts: {
     storeKind: parts.storeKind,
     audit,
     consents: new ConsentService({ repository: parts.repository, audit }),
+    consentRepository: parts.repository,
+    otp: new OtpService({ store: parts.otpStore, key: deriveKey(parts.secret, 'otp-code-hash') }),
+    sessionKey: deriveKey(parts.secret, 'patient-session'),
     adapters: {
       pds: withFaults('pds', new MockPds(), ['getPatient', 'search'], faults),
       sds: withFaults('sds', new MockSds(), ['getGpConnectEndpoint'], faults),

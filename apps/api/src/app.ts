@@ -1,6 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify'
+import cookie from '@fastify/cookie'
 import swagger from '@fastify/swagger'
-import { simulatorRoutes } from './routes/simulator'
+import { registerErrorHandler } from './errors'
+import { patientRoutes } from './routes/patient'
+import { simulatorDemoRoutes, simulatorRoutes } from './routes/simulator'
 import { createServices, type Services } from './services'
 
 // Everything the service does is simulated until real adapters exist. Every
@@ -21,10 +24,18 @@ declare module 'fastify' {
 }
 
 export async function buildApp(options: AppOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: options.logger ?? false })
+  const app = Fastify({
+    logger: options.logger ?? false,
+    // Behind Vercel's proxy: trust X-Forwarded-* for protocol/host (secure cookies, links).
+    trustProxy: true,
+    // Every request gets a UUID, used as the audit correlation id.
+    genReqId: () => crypto.randomUUID(),
+  })
   const services = options.services ?? createServices()
   app.decorate('services', services)
   app.addHook('onClose', () => services.close())
+  registerErrorHandler(app)
+  await app.register(cookie)
 
   await app.register(swagger, {
     openapi: {
@@ -79,6 +90,8 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
   )
 
   await app.register(simulatorRoutes)
+  await app.register(simulatorDemoRoutes)
+  await app.register(patientRoutes)
 
   app.get('/api/openapi.json', { schema: { hide: true } }, async () => app.swagger())
 

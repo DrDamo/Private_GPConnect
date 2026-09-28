@@ -165,3 +165,9 @@ Private_GPConnect/
   - fault injection (timeout, outage, latency) applied to every adapter
 
   The API adds `/api/sim/*` endpoints for the patient list, the NHS login persona picker and the on-screen phone. The web app has a *Synthetic test patients* page.
+- [x] **Step 4:** the patient consent journey.
+  - **Consent request:** a provider's request checks the patient on PDS and refuses S-flag, deceased and under-16 patients, using the same rules as the policy decision point. The patient is texted at the **PDS** mobile number, and the text doesn't name the provider.
+  - **Sign-in:** nothing identifying is shown before sign-in. NHS login must be P9: P5 is refused, and the sign-in state is checked to stop login-CSRF. The fallback is a text-message code plus date of birth. Codes are hashed, expire after 10 minutes, allow 5 attempts, are single use, and at most 3 can be sent per 15 minutes. A code sign-in is limited to that one request, to viewing only, and to 30 days.
+  - **Decision:** the patient agrees to a versioned, hashed wording, and the server rejects a decision made against out-of-date wording.
+  - **Patient dashboard** (NHS login only): lists requests and consents, allows withdrawal, and shows a plain-English access log built from the audit trail.
+  - **Simulator pages:** an NHS login persona picker, an on-screen phone, and a demo launcher that stands in for the provider portal.

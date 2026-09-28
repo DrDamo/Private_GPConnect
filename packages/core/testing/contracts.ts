@@ -132,3 +132,38 @@ export function consentRepositoryContract(name: string, makeRepo: () => Promise<
     })
   })
 }
+
+export function otpStoreContract(name: string, makeStore: () => Promise<import('../src').OtpStore>) {
+  describe(`OtpStore contract: ${name}`, () => {
+    const challenge = (n: number, subjectRef = 'subject-1', createdAt = '2026-10-01T09:00:00.000Z') => ({
+      id: `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      subjectRef,
+      destination: '07700900001',
+      codeHash: 'a'.repeat(64),
+      createdAt,
+      expiresAt: '2026-10-01T09:10:00.000Z',
+      attempts: 0,
+    })
+
+    it('round-trips, increments attempts atomically and consumes once', async () => {
+      const store = await makeStore()
+      await store.insert(challenge(1))
+      expect(await store.get(challenge(1).id)).toEqual(challenge(1))
+      const results = await Promise.all([1, 2, 3].map(() => store.incrementAttempts(challenge(1).id)))
+      expect(results.map(r => r?.attempts).sort()).toEqual([1, 2, 3])
+      expect(await store.consume(challenge(1).id, '2026-10-01T09:01:00.000Z')).toBe(true)
+      expect(await store.consume(challenge(1).id, '2026-10-01T09:02:00.000Z')).toBe(false)
+      expect((await store.get(challenge(1).id))?.consumedAt).toBe('2026-10-01T09:01:00.000Z')
+      expect(await store.incrementAttempts('20000000-0000-4000-8000-00000000ffff')).toBeNull()
+    })
+
+    it('counts recent challenges per subject', async () => {
+      const store = await makeStore()
+      await store.insert(challenge(1, 's', '2026-10-01T08:00:00.000Z'))
+      await store.insert(challenge(2, 's', '2026-10-01T09:00:00.000Z'))
+      await store.insert(challenge(3, 'other', '2026-10-01T09:00:00.000Z'))
+      expect(await store.countSince('s', '2026-10-01T08:30:00.000Z')).toBe(1)
+      expect(await store.countSince('s', '2026-10-01T07:00:00.000Z')).toBe(2)
+    })
+  })
+}
