@@ -30,7 +30,12 @@ await build({
 
 await writeFile(
   `${funcDir}/.vc-config.json`,
-  JSON.stringify({ runtime: 'nodejs22.x', handler: 'index.mjs', launcherType: 'Nodejs' }, null, 2),
+  JSON.stringify(
+    // lhr1 (London): UK data residency, and next to the Supabase database (eu-west-2).
+    { runtime: 'nodejs22.x', handler: 'index.mjs', launcherType: 'Nodejs', regions: ['lhr1'] },
+    null,
+    2,
+  ),
 )
 
 await writeFile(
