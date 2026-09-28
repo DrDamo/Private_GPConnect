@@ -120,7 +120,10 @@ function Content({ nhsNumber }: { session: ProviderSession; nhsNumber: string })
                 <StatusTag audience="provider" status="active" /> The patient agreed on {formatDate(active.decision?.at)} ({active.decision?.via === 'sms' ? 'text message code: view only' : 'NHS login'}). Access until{' '}
                 {formatDate(active.expiresAt)}.
               </p>
-              <p className="text-sm text-gray-700">Parts of the record: {active.htmlSections.map(s => s.label).join(', ')}</p>
+              <p className="text-sm text-gray-700">Can view: {active.htmlSections.map(s => s.label).join(', ')}</p>
+              {active.clinicalAreas.length > 0 && (
+                <p className="text-sm text-gray-700">Can import as structured data: {active.clinicalAreas.map(a => a.label).join('; ')}</p>
+              )}
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link className="rounded bg-brand px-4 py-2 font-semibold text-white" href={`/provider/record/${active.id}`}>
                   View GP record

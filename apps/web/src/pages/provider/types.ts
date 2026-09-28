@@ -29,6 +29,7 @@ export interface ConsentSummary {
   decision: { outcome: string; at: string; via: 'nhs-login' | 'sms' } | null
   scope: { actions: string[]; htmlSections: string[]; clinicalAreas: string[] }
   htmlSections: Array<{ code: string; label: string }>
+  clinicalAreas: Array<{ code: string; label: string }>
   validFrom: string | null
   expiresAt: string | null
   withdrawal: { at: string; by: string; reason?: string } | null

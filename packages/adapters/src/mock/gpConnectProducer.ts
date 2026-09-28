@@ -1,5 +1,5 @@
 import type * as fhir3 from 'fhir/r3'
-import { HTML_SECTIONS, type HtmlSection } from '@pgpc/core'
+import { CLINICAL_AREAS, HTML_SECTIONS, type ClinicalArea, type HtmlSection } from '@pgpc/core'
 import { clinicalRecordFor, PATIENTS, PRACTICES, type SimPatient, type SimPractice } from '@pgpc/fixtures'
 import { AdapterError } from '../errors'
 import {
@@ -11,7 +11,9 @@ import {
   type GpConnectJwtClaims,
   type GpConnectTransport,
 } from '../gpConnect'
+import { areaForParameter, INTERACTION_GET_STRUCTURED_RECORD, NHS_NUMBER_SYSTEM_1X } from '../gpConnectStructured'
 import { renderSection, SECTION_TITLES } from './careRecordHtml'
+import { structuredBundleFor } from './structuredRecord'
 
 // A simulated GP system (the GP Connect "producer"). It validates each request
 // the way a real producer and the Spine Secure Proxy would, so mistakes in our
@@ -21,9 +23,9 @@ const fail = (code: 'invalid-request' | 'unauthorised' | 'not-found', message: s
   throw new AdapterError('gp-connect', code, message)
 }
 
-function validate(ex: GpConnectExchange, practice: SimPractice, now: Date): { nhsNumber: string; section: HtmlSection } {
+function validateCommon(ex: GpConnectExchange, practice: SimPractice, now: Date, interactionId: string): GpConnectJwtClaims {
   const h = ex.headers
-  if (h['Ssp-InteractionID'] !== INTERACTION_GET_CARE_RECORD) fail('invalid-request', 'Wrong Ssp-InteractionID')
+  if (h['Ssp-InteractionID'] !== interactionId) fail('invalid-request', 'Wrong Ssp-InteractionID')
   if (h['Ssp-To'] !== practice.asid) fail('invalid-request', 'Ssp-To does not match the practice ASID')
   if (!/^\d{12}$/.test(h['Ssp-From'] ?? '')) fail('invalid-request', 'Ssp-From must be a 12-digit ASID')
   if (!h['Ssp-TraceID']) fail('invalid-request', 'Ssp-TraceID is required')
@@ -38,7 +40,11 @@ function validate(ex: GpConnectExchange, practice: SimPractice, now: Date): { nh
   if (claims.reason_for_request !== 'directcare') fail('unauthorised', 'reason_for_request must be directcare')
   if (!claims.requesting_organization?.identifier?.[0]?.value) fail('unauthorised', 'requesting_organization needs an ODS code')
   if (!claims.requesting_practitioner?.identifier?.length) fail('unauthorised', 'requesting_practitioner needs an identifier')
+  return claims
+}
 
+function validateHtml(ex: GpConnectExchange, practice: SimPractice, now: Date): { nhsNumber: string; section: HtmlSection } {
+  const claims = validateCommon(ex, practice, now, INTERACTION_GET_CARE_RECORD)
   const params = ex.body.parameter ?? []
   const nhsParam = params.find(p => p.name === 'patientNHSNumber')?.valueIdentifier
   const sectionCode = params.find(p => p.name === 'recordSection')?.valueCodeableConcept?.coding?.[0]
@@ -49,6 +55,25 @@ function validate(ex: GpConnectExchange, practice: SimPractice, now: Date): { nh
   const recordNhs = claims.requested_record?.identifier?.[0]?.value
   if (recordNhs !== nhsParam!.value) fail('unauthorised', 'JWT requested_record does not match patientNHSNumber')
   return { nhsNumber: nhsParam!.value!, section: sectionCode!.code as HtmlSection }
+}
+
+function validateStructured(ex: GpConnectExchange, practice: SimPractice, now: Date): { nhsNumber: string; areas: ClinicalArea[] } {
+  const claims = validateCommon(ex, practice, now, INTERACTION_GET_STRUCTURED_RECORD)
+  const params = ex.body.parameter ?? []
+  const nhsParam = params.find(p => p.name === 'patientNHSNumber')?.valueIdentifier
+  if (nhsParam?.system !== NHS_NUMBER_SYSTEM_1X || !nhsParam.value) fail('invalid-request', 'patientNHSNumber is required')
+  const areas: ClinicalArea[] = []
+  for (const p of params) {
+    if (p.name === 'patientNHSNumber') continue
+    const area = areaForParameter(p.name ?? '')
+    if (!area || !CLINICAL_AREAS.includes(area)) fail('invalid-request', `Unknown parameter ${p.name}`)
+    areas.push(area!)
+  }
+  if (areas.length === 0) fail('invalid-request', 'At least one clinical area must be requested')
+  if (claims.requested_record?.identifier?.[0]?.value !== nhsParam!.value) {
+    fail('unauthorised', 'JWT requested_record does not match patientNHSNumber')
+  }
+  return { nhsNumber: nhsParam!.value!, areas }
 }
 
 function renderBundle(patient: SimPatient, practice: SimPractice, section: HtmlSection, now: Date): fhir3.Bundle {
@@ -99,9 +124,16 @@ export function simulatedGpSystems(
     const practice = practices.find(p => host === `${p.odsCode.toLowerCase()}.gpconnect.sim.invalid`)
     if (!practice || !practice.gpConnectEnabled) throw new AdapterError('gp-connect', 'unavailable', 'No GP Connect service at this address')
     const now = clock()
-    const { nhsNumber, section } = validate(exchange, practice, now)
-    const patient = patients.find(p => p.nhsNumber === nhsNumber && p.gpOdsCode === practice.odsCode)
-    if (!patient) throw new AdapterError('gp-connect', 'not-found', 'Patient not found at this practice')
-    return renderBundle(patient, practice, section, now)
+    const findPatient = (nhsNumber: string) => {
+      const patient = patients.find(p => p.nhsNumber === nhsNumber && p.gpOdsCode === practice.odsCode)
+      if (!patient) throw new AdapterError('gp-connect', 'not-found', 'Patient not found at this practice')
+      return patient
+    }
+    if (exchange.headers['Ssp-InteractionID'] === INTERACTION_GET_STRUCTURED_RECORD) {
+      const { nhsNumber, areas } = validateStructured(exchange, practice, now)
+      return structuredBundleFor(findPatient(nhsNumber), practice, areas)
+    }
+    const { nhsNumber, section } = validateHtml(exchange, practice, now)
+    return renderBundle(findPatient(nhsNumber), practice, section, now)
   }
 }

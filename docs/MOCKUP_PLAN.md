@@ -181,3 +181,14 @@ Private_GPConnect/
   - **Display:** HTML is sanitised on the server and rendered in a sandboxed iframe (no scripts, no same-origin access) with a viewer watermark. Responses are `no-store`.
   - **Request inspector:** shows exactly what was sent to the GP system.
   - **Still to do:** swap the placeholder HTML for real dummy examples.
+- [x] **Step 6:** GP Connect Access Record: Structured (FHIR STU3).
+  - **Request:** `$gpc.getstructuredrecord` asks only for the consented clinical areas, using `include*` parameters (1.x names, still to be verified).
+  - **Simulated GP system:** builds each record with the GP Connect Demonstrator's builder from the same fixtures as the HTML view. It returns only the requested areas; an empty area still comes back as a List with an emptyReason; and confidential items are withheld with the List warning.
+  - **Defence in depth:** the consumer strips anything outside the requested areas, including consultation-structure Lists and unreferenced Observations, and records how much it stripped.
+  - **Safety behaviours covered by tests:**
+    - the original dosage free text is always carried
+    - "No known allergies" is positively asserted (716186003), which is distinct from nothing recorded
+    - blood pressure is split into systolic and diastolic, never truncated
+  - **Portal:** a *Structured data* tab parsed with the Demonstrator's extractors, and a FHIR bundle download. The API offers `format=bundle` for provider systems.
+  - **Checks:** the policy decision point checks the action and every area, so SMS (view-only) consent can't retrieve structured data. Every retrieval is audited and appears in the patient's log.
+  - **Found along the way:** the Demonstrator's builder parses any value with a unit using `parseFloat`, so "138/86 mmHg" becomes 138. This needs fixing upstream.

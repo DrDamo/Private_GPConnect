@@ -71,28 +71,25 @@ export function decodeUnsignedJwt<T>(token: string): T | null {
   }
 }
 
-export function buildCareRecordRequest(input: {
+export function buildJwtClaims(input: {
+  aud: string
   nhsNumber: string
-  section: HtmlSection
-  endpoint: GpConnectEndpoint
+  nhsNumberSystem: string
   requester: Requester
-  consumer: Consumer
-  traceId: string
-  now?: Date
-}): GpConnectExchange {
-  const now = Math.floor((input.now ?? new Date()).getTime() / 1000)
-  const url = input.endpoint.address.replace(/\/structured\/fhir$/, '/fhir') + '/Patient/$gpc.getcarerecord'
+  now: Date
+}): GpConnectJwtClaims {
+  const now = Math.floor(input.now.getTime() / 1000)
   const [given, ...rest] = input.requester.user.name.replace(/\s*\(.*\)$/, '').replace(/^Dr\s+/, '').split(' ')
-  const claims: GpConnectJwtClaims = {
+  return {
     iss: 'https://private-gpconnect.sim.invalid',
     sub: input.requester.user.userId,
-    aud: url,
+    aud: input.aud,
     exp: now + 300,
     iat: now,
     reason_for_request: 'directcare',
     requested_record: {
       resourceType: 'Patient',
-      identifier: [{ system: GPC_NHS_NUMBER_SYSTEM, value: input.nhsNumber }],
+      identifier: [{ system: input.nhsNumberSystem, value: input.nhsNumber }],
     },
     requested_scope: 'patient/*.read',
     requesting_device: {
@@ -118,15 +115,36 @@ export function buildCareRecordRequest(input: {
       name: [{ family: rest.join(' ') || given, given: rest.length ? [given] : [] }],
     },
   }
+}
+
+export function spineHeaders(input: { traceId: string; consumer: Consumer; endpoint: GpConnectEndpoint; interactionId: string; claims: GpConnectJwtClaims }) {
+  return {
+    'Ssp-TraceID': input.traceId,
+    'Ssp-From': input.consumer.asid,
+    'Ssp-To': input.endpoint.asid,
+    'Ssp-InteractionID': input.interactionId,
+    Authorization: `Bearer ${encodeUnsignedJwt(input.claims)}`,
+    Accept: 'application/fhir+json',
+    'Content-Type': 'application/fhir+json',
+  }
+}
+
+export function buildCareRecordRequest(input: {
+  nhsNumber: string
+  section: HtmlSection
+  endpoint: GpConnectEndpoint
+  requester: Requester
+  consumer: Consumer
+  traceId: string
+  now?: Date
+}): GpConnectExchange {
+  const url = input.endpoint.address.replace(/\/structured\/fhir$/, '/fhir') + '/Patient/$gpc.getcarerecord'
+  const claims = buildJwtClaims({ aud: url, nhsNumber: input.nhsNumber, nhsNumberSystem: GPC_NHS_NUMBER_SYSTEM, requester: input.requester, now: input.now ?? new Date() })
   return {
     url,
     jwtClaims: claims,
     headers: {
-      'Ssp-TraceID': input.traceId,
-      'Ssp-From': input.consumer.asid,
-      'Ssp-To': input.endpoint.asid,
-      'Ssp-InteractionID': INTERACTION_GET_CARE_RECORD,
-      Authorization: `Bearer ${encodeUnsignedJwt(claims)}`,
+      ...spineHeaders({ traceId: input.traceId, consumer: input.consumer, endpoint: input.endpoint, interactionId: INTERACTION_GET_CARE_RECORD, claims }),
       Accept: 'application/json+fhir',
       'Content-Type': 'application/json+fhir',
     },

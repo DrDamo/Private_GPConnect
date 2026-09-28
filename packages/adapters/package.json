@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@pgpc/core": "*",
-    "@pgpc/fixtures": "*"
+    "@pgpc/fixtures": "*",
+    "@pgpc/gpc-fhir": "*"
   },
   "devDependencies": {
     "@types/fhir": "^0.0.42"

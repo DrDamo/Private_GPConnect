@@ -134,6 +134,13 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
       if (failed) return `${provider} tried to look at your ${part} but your GP system could not be reached`
       return `${provider} looked at your ${part}`
     }
+    case 'access.structured.retrieve': {
+      const areas = Array.isArray(e.details?.areas) ? (e.details.areas as string[]) : []
+      const parts = areas.map(a => CLINICAL_AREA_LABELS[a as keyof typeof CLINICAL_AREA_LABELS] ?? a).join('; ')
+      if (e.outcome === 'denied') return `${provider} tried to copy parts of your GP record but was not allowed`
+      if (failed) return `${provider} tried to copy parts of your GP record but your GP system could not be reached`
+      return `${provider} copied these parts of your GP record into their records: ${parts}`
+    }
     default:
       if (e.type.startsWith('access.')) {
         return failed ? `${provider} tried to access your record but was refused` : `${provider} accessed your GP record`

@@ -4,6 +4,7 @@ import { formatDate, formatDateTime } from '../../format'
 import Link from '../../Link'
 import { ErrorBox, SimNote } from '../../ui'
 import ProviderFrame from './ProviderFrame'
+import StructuredView from './StructuredView'
 import { REASON_TEXT, type ConsentSummary } from './types'
 
 interface SectionResponse {
@@ -39,6 +40,7 @@ function Frame({ html }: { html: string }) {
 function Content({ consentId }: { consentId: string }) {
   const [consent, setConsent] = useState<ConsentSummary | null>(null)
   const [section, setSection] = useState<string | null>(null)
+  const [mode, setMode] = useState<'html' | 'structured'>('html')
   const [result, setResult] = useState<{ section: string; data?: SectionResponse; error?: { message: string; reasons?: string[] } } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -82,6 +84,26 @@ function Content({ consentId }: { consentId: string }) {
         Consent until {formatDate(consent.expiresAt)} · {consent.purpose}. Every view is logged and visible to the patient.
       </p>
 
+      {consent.scope.actions.includes('structured.retrieve') && (
+        <div className="flex gap-4 border-b border-gray-300" role="tablist">
+          {(['html', 'structured'] as const).map(m => (
+            <button
+              key={m}
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => setMode(m)}
+              className={`-mb-px border-b-2 px-1 pb-2 font-semibold ${mode === m ? 'border-brand text-brand' : 'border-transparent text-gray-600'}`}
+            >
+              {m === 'html' ? 'View record' : 'Structured data'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'structured' ? (
+        <StructuredView consentId={consentId} />
+      ) : (
+        <>
       <nav className="flex flex-wrap gap-2" aria-label="Record sections">
         {consent.htmlSections.map(s => (
           <button
@@ -125,6 +147,8 @@ function Content({ consentId }: { consentId: string }) {
               {JSON.stringify({ url: data.exchange.url, headers: data.exchange.headers, jwtClaims: data.exchange.jwtClaims, body: data.exchange.body }, null, 2)}
             </pre>
           </details>
+        </>
+      )}
         </>
       )}
     </div>

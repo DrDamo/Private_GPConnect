@@ -2,6 +2,7 @@ import { createHmac } from 'node:crypto'
 import { MIDDLEWARE } from '@pgpc/fixtures'
 import {
   GpConnectHtmlClient,
+  GpConnectStructuredClient,
   InMemoryFaultSource,
   InMemoryOutbox,
   MockNhsLogin,
@@ -11,6 +12,7 @@ import {
   simulatedGpSystems,
   withFaults,
   type GpConnectHtmlAdapter,
+  type GpConnectStructuredAdapter,
   type NhsLoginAdapter,
   type PdsAdapter,
   type SdsAdapter,
@@ -42,6 +44,7 @@ export interface Adapters {
   nhsLogin: NhsLoginAdapter
   sms: SmsAdapter
   gpConnectHtml: GpConnectHtmlAdapter
+  gpConnectStructured: GpConnectStructuredAdapter
 }
 
 export interface Simulator {
@@ -148,6 +151,12 @@ function assemble(parts: {
       nhsLogin: withFaults('nhs-login', nhsLogin, ['exchangeCode'], faults),
       sms: withFaults('sms', new MockSms(parts.outbox), ['send'], faults),
       gpConnectHtml: withFaults('gp-connect', new GpConnectHtmlClient(simulatedGpSystems(), MIDDLEWARE), ['getCareRecord'], faults),
+      gpConnectStructured: withFaults(
+        'gp-connect',
+        new GpConnectStructuredClient(simulatedGpSystems(), MIDDLEWARE),
+        ['getStructuredRecord'],
+        faults,
+      ),
     },
     simulator: { nhsLogin, outbox: parts.outbox, faults },
     ping: parts.ping,

@@ -1,8 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import sanitizeHtml from 'sanitize-html'
 import { AdapterError, displayName, signToken, verifyToken, type PdsPatient } from '@pgpc/adapters'
+import { extractAllergies, extractCodedData, extractConsultations, extractLists, extractMedications, extractProblems } from '@pgpc/gpc-fhir'
 import {
   ageOn,
+  CLINICAL_AREA_LABELS,
+  CLINICAL_AREAS,
   decide,
   effectiveStatus,
   HTML_SECTION_LABELS,
@@ -10,6 +13,7 @@ import {
   patientIneligibility,
   PROVIDER_PROFILES,
   PROVIDER_TYPE_LABELS,
+  type ClinicalArea,
   type ConsentRecord,
   type HtmlSection,
 } from '@pgpc/core'
@@ -92,6 +96,7 @@ function consentSummary(c: ConsentRecord, now: Date, patientName?: string | null
     decision: c.decision ? { outcome: c.decision.outcome, at: c.decision.at, via: c.decision.evidence.channel } : null,
     scope: c.scope,
     htmlSections: c.scope.htmlSections.map(s => ({ code: s, label: HTML_SECTION_LABELS[s] })),
+    clinicalAreas: c.scope.clinicalAreas.map(a => ({ code: a, label: CLINICAL_AREA_LABELS[a] })),
     validFrom: c.validFrom ?? null,
     expiresAt: c.expiresAt ?? null,
     withdrawal: c.withdrawal ?? null,
@@ -436,6 +441,104 @@ export async function providerRoutes(app: FastifyInstance) {
           details: { section, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' },
         })
         throw err
+      }
+    },
+  )
+
+  // ---- GP record: structured data ------------------------------------------------
+
+  app.get<{ Params: { id: string }; Querystring: { areas?: string; format?: 'summary' | 'bundle' } }>(
+    '/api/provider/consents/:id/structured',
+    {
+      schema: {
+        summary: 'Retrieve structured data (GP Connect Access Record: Structured, FHIR STU3). Checked and audited',
+        description:
+          'Returns only the consented clinical areas (optionally narrowed with `areas`). ' +
+          '`format=bundle` returns the FHIR STU3 Bundle alone, for provider systems to import.',
+        tags,
+        querystring: {
+          type: 'object',
+          properties: {
+            areas: { type: 'string', pattern: `^(${CLINICAL_AREAS.join('|')})(,(${CLINICAL_AREAS.join('|')}))*$` },
+            format: { type: 'string', enum: ['summary', 'bundle'], default: 'summary' },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const actor = auth(req)
+      const { audit, adapters } = app.services
+      const consent = await ownConsent(actor, req.params.id)
+      const nhsNumber = consent.patient.nhsNumber
+      const areas = (req.query.areas ? [...new Set(req.query.areas.split(','))] : consent.scope.clinicalAreas) as ClinicalArea[]
+      const base = { type: 'access.structured.retrieve', actor: auditActor(actor), nhsNumber, consentId: consent.id, correlationId: String(req.id) }
+
+      const patient = await adapters.pds.getPatient(nhsNumber)
+      const decision = decide({
+        action: 'structured.retrieve',
+        actor: { userId: actor.user.userId, role: actor.user.role, active: actor.user.active, organisationOdsCode: actor.user.organisationOdsCode },
+        organisation: { odsCode: actor.org.odsCode, type: actor.org.type, active: actor.org.active },
+        patient: { nhsNumber, restricted: patient.restricted, deceased: patient.deceased, birthDate: patient.birthDate },
+        consent,
+        clinicalAreas: areas,
+        now: new Date(),
+      })
+      if (decision.decision === 'deny') {
+        await audit.record({ ...base, outcome: 'denied', details: { areas, reasons: decision.reasons } })
+        throw new HttpError(403, 'access-denied', 'Access to this record is not permitted', { reasons: decision.reasons })
+      }
+      const endpoint = patient.gp ? await adapters.sds.getGpConnectEndpoint(patient.gp.odsCode) : null
+      if (!endpoint) {
+        await audit.record({ ...base, outcome: 'failure', details: { areas, error: 'gp-connect-not-enabled' } })
+        throw new HttpError(422, 'gp-connect-not-enabled', "The patient's GP practice does not offer GP Connect, so the record cannot be retrieved")
+      }
+
+      let result
+      try {
+        result = await adapters.gpConnectStructured.getStructuredRecord({
+          nhsNumber,
+          areas,
+          endpoint,
+          requester: { user: actor.user, organisation: { odsCode: actor.org.odsCode, name: actor.org.name } },
+          traceId: String(req.id),
+        })
+      } catch (err) {
+        await audit.record({ ...base, outcome: 'failure', details: { areas, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' } })
+        throw err
+      }
+      const { record, exchange } = result
+      await audit.record({
+        ...base,
+        outcome: 'success',
+        details: { areas, practice: endpoint.odsCode, supplier: endpoint.supplier, strippedUnrequested: record.removed.length },
+      })
+
+      if (req.query.format === 'bundle') {
+        return reply.header('Content-Type', 'application/fhir+json; fhirVersion=3.0').send(record.bundle)
+      }
+      const b = record.bundle
+      const lists = extractLists(b)
+      return {
+        areas,
+        fhirVersion: 'STU3',
+        practice: { odsCode: endpoint.odsCode, supplier: endpoint.supplier },
+        retrievedBy: actor.user.name,
+        retrievedAt: new Date().toISOString(),
+        warnings: lists.filter(l => l.warningCode).map(l => ({ list: l.title ?? '', code: l.warningCode!, note: l.note ?? null })),
+        data: {
+          ...(areas.includes('medications') ? { medications: extractMedications(b) } : {}),
+          ...(areas.includes('allergies') ? { allergies: extractAllergies(b) } : {}),
+          ...(areas.includes('problems') ? { problems: extractProblems(b) } : {}),
+          ...(areas.includes('uncategorised') ? { observations: extractCodedData(b) } : {}),
+          ...(areas.includes('consultations') ? { consultations: extractConsultations(b) } : {}),
+        },
+        bundle: b,
+        exchange: {
+          url: exchange.url,
+          headers: { ...exchange.headers, Authorization: `Bearer ${exchange.headers.Authorization.slice(7, 40)}…` },
+          jwtClaims: exchange.jwtClaims,
+          body: exchange.body,
+        },
       }
     },
   )
