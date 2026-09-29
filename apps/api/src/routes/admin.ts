@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { ADAPTER_NAMES, signToken, verifyToken, type AdapterName, type Fault } from '@pgpc/adapters'
 import { CONSENT_STATUSES, effectiveStatus, PROVIDER_TYPE_LABELS, type AuditEvent, type AuditOutcome, type ConsentStatus } from '@pgpc/core'
 import { ADMIN_USERS, adminUserById, PROVIDER_ORGS, PROVIDER_USERS, providerOrgByOds, providerUserById, type SimAdminUser } from '@pgpc/fixtures'
+import { isAttempt, unresolvedAttempts } from '../auditedSend'
 import { HttpError } from '../errors'
 
 // Service administration: the audit trail, the consent register and (in the
@@ -100,7 +101,8 @@ export async function adminRoutes(app: FastifyInstance) {
         recentWindow: recent.length,
         recentDenied: recent.filter(e => e.outcome === 'denied').length,
         recentFailures: recent.filter(e => e.outcome === 'failure').length,
-        recentRecordAccess: recent.filter(e => e.type.startsWith('access.') && e.outcome === 'success').length,
+        recentRecordAccess: recent.filter(e => e.type.startsWith('access.') && !isAttempt(e) && e.outcome === 'success').length,
+        unconfirmedSends: unresolvedAttempts(recent).length,
       },
       faults: await app.services.simulator.faults.all(),
     }

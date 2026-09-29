@@ -16,6 +16,7 @@ import {
   type ConsentRecord,
   type HtmlSection,
 } from '@pgpc/core'
+import { auditedSend, isAttempt, unresolvedAttempts } from '../auditedSend'
 import { HttpError } from '../errors'
 import {
   clearSession,
@@ -107,6 +108,15 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
   const provider = providerFor(e.consentId, e.actor.organisationOdsCode)
   const failed = e.outcome !== 'success'
   switch (e.type) {
+    // Attempts reach here only when no outcome was recorded (see access-log).
+    case 'access.document.send.attempt': {
+      const title = typeof e.details?.title === 'string' ? e.details.title : 'a document'
+      return `${provider} may have sent your GP practice "${title}", but we could not confirm it`
+    }
+    case 'consent.notification.attempt':
+      return `We may have sent you a text message about a request from ${provider}, but could not confirm it`
+    case 'patient.sms-code-sent.attempt':
+      return 'A sign-in code may have been sent to your mobile, but we could not confirm it'
     case 'consent.requested':
       return failed ? `${provider} tried to ask for your consent, but it was refused` : `${provider} asked for your consent to see your GP record`
     case 'consent.notification':
@@ -283,19 +293,19 @@ export async function patientRoutes(app: FastifyInstance) {
       }
       const issued = await otp.issue(record.id, patient.mobile)
       if (!issued.ok) throw new HttpError(429, 'too-many-codes', 'Too many codes requested. Wait 15 minutes or use NHS login.')
-      await adapters.sms.send({
-        to: patient.mobile,
-        body: `SIMULATION. Your sign-in code is ${issued.code}. It expires in 10 minutes. Never share it with anyone.`,
-        reference: record.id,
-      })
-      await audit.record({
-        type: 'patient.sms-code-sent',
-        outcome: 'success',
-        actor: { type: 'system', id: 'otp' },
-        nhsNumber: record.patient.nhsNumber,
-        consentId: record.id,
-        correlationId: String(req.id),
-      })
+      const mobile = patient.mobile
+      await auditedSend(
+        audit,
+        { type: 'patient.sms-code-sent', actor: { type: 'system', id: 'otp' }, nhsNumber: record.patient.nhsNumber, consentId: record.id, correlationId: String(req.id) },
+        () =>
+          adapters.sms.send({
+            to: mobile,
+            body: `SIMULATION. Your sign-in code is ${issued.code}. It expires in 10 minutes. Never share it with anyone.`,
+            reference: record.id,
+          }),
+        () => ({}),
+        err => ({ error: err instanceof Error ? err.name : 'unexpected' }),
+      )
       return { challengeId: issued.challenge.id, sentTo: maskMobile(patient.mobile) }
     },
   )
@@ -452,7 +462,10 @@ export async function patientRoutes(app: FastifyInstance) {
       (consentId && byId.get(consentId)) ||
       (ods && (byOds.get(ods) ?? providerOrgByOds(ods)?.name)) ||
       'A healthcare provider'
+    // An attempt matters only if its outcome was never recorded.
+    const unresolved = new Set(unresolvedAttempts(events))
     return events
+      .filter(e => !isAttempt(e) || unresolved.has(e))
       .map(e => ({ at: e.recordedAt, outcome: e.outcome, description: describeEvent(e, providerFor), seq: e.seq }))
       .filter((e): e is { at: string; outcome: AuditEvent['outcome']; description: string; seq: number } => e.description !== null)
       .reverse()

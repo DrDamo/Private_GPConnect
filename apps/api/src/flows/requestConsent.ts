@@ -1,5 +1,6 @@
 import { displayName } from '@pgpc/adapters'
 import { patientIneligibility, type ConsentRecord, type ConsentScope, type ProviderType, type UserRole } from '@pgpc/core'
+import { auditedSend } from '../auditedSend'
 import { HttpError } from '../errors'
 import { maskMobile } from '../session'
 import type { Services } from '../services'
@@ -72,6 +73,13 @@ export async function requestConsent(services: Services, input: RequestConsentIn
     { correlationId: input.correlationId },
   )
 
+  const notificationEvent = {
+    type: 'consent.notification',
+    actor: { type: 'system' as const, id: 'consent-notifier' },
+    nhsNumber: patient.nhsNumber,
+    consentId: consent.id,
+    correlationId: input.correlationId,
+  }
   let notification: RequestConsentResult['notification']
   if (!patient.mobile) {
     notification = { sent: false, reason: 'no-mobile' }
@@ -82,22 +90,30 @@ export async function requestConsent(services: Services, input: RequestConsentIn
       `SIMULATION. A healthcare provider has asked to see your GP record. ` +
       `Review the request: ${input.origin}/patient/consent/${consent.id} ` +
       `If you were not expecting this, you can ignore this message.`
+    const mobile = patient.mobile
+    let smsFailed = false
     try {
-      await adapters.sms.send({ to: patient.mobile, body, reference: consent.id })
-      notification = { sent: true, to: maskMobile(patient.mobile) }
-    } catch {
+      await auditedSend(
+        audit,
+        { ...notificationEvent, details: { channel: 'sms' } },
+        () =>
+          adapters.sms.send({ to: mobile, body, reference: consent.id }).catch(err => {
+            smsFailed = true
+            throw err
+          }),
+        () => ({}),
+        () => ({ reason: 'sms-failed' }),
+      )
+      notification = { sent: true, to: maskMobile(mobile) }
+    } catch (err) {
+      // A failed text is reported to the provider; a failed audit write is not swallowed.
+      if (!smsFailed) throw err
       notification = { sent: false, reason: 'sms-failed' }
     }
   }
-  await audit.record({
-    type: 'consent.notification',
-    outcome: notification.sent ? 'success' : 'failure',
-    actor: { type: 'system', id: 'consent-notifier' },
-    nhsNumber: patient.nhsNumber,
-    consentId: consent.id,
-    correlationId: input.correlationId,
-    details: notification.sent ? { channel: 'sms' } : { reason: notification.reason },
-  })
+  if (!notification.sent && notification.reason === 'no-mobile') {
+    await audit.record({ ...notificationEvent, outcome: 'failure', details: { reason: 'no-mobile' } })
+  }
 
   return { consent, patientName: displayName(patient), notification }
 }

@@ -27,6 +27,7 @@ import {
   type HtmlSection,
 } from '@pgpc/core'
 import { MIDDLEWARE, practiceByOds, PROVIDER_USERS, providerOrgByOds, providerUserById, type SimProviderOrg, type SimProviderUser } from '@pgpc/fixtures'
+import { auditedSend, unresolvedAttempts } from '../auditedSend'
 import { HttpError } from '../errors'
 import { requestConsent } from '../flows/requestConsent'
 import { sanitiseGpHtml } from '../sanitise'
@@ -651,27 +652,23 @@ export async function providerRoutes(app: FastifyInstance) {
         messageId: crypto.randomUUID(),
         now: new Date(),
       })
-      let messageId: string
-      try {
-        ;({ messageId } = await adapters.mesh.send({
-          from: MIDDLEWARE.meshMailbox,
-          to: mailbox,
-          workflowId: SEND_DOCUMENT_WORKFLOW_ID,
-          localId: consent.id,
-          subject: title,
-          contentType: 'application/fhir+json',
-          content: bundle,
-        }))
-      } catch (err) {
-        await audit.record({ ...base, outcome: 'failure', details: { title, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' } })
-        throw err
-      }
-      // The middleware keeps no copy of the document: only this audit entry.
-      await audit.record({
-        ...base,
-        outcome: 'success',
-        details: { messageId, kind: req.body.kind, title, practice: practiceOds, workflowId: SEND_DOCUMENT_WORKFLOW_ID, medicines: req.body.medicines?.length ?? 0 },
-      })
+      // The middleware keeps no copy of the document: only these audit entries.
+      const { messageId } = await auditedSend(
+        audit,
+        { ...base, details: { title, kind: req.body.kind, practice: practiceOds } },
+        () =>
+          adapters.mesh.send({
+            from: MIDDLEWARE.meshMailbox,
+            to: mailbox,
+            workflowId: SEND_DOCUMENT_WORKFLOW_ID,
+            localId: consent.id,
+            subject: title,
+            contentType: 'application/fhir+json',
+            content: bundle,
+          }),
+        sent => ({ messageId: sent.messageId, workflowId: SEND_DOCUMENT_WORKFLOW_ID, medicines: req.body.medicines?.length ?? 0 }),
+        err => ({ error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' }),
+      )
       return reply.code(201).send({ messageId, title, status: 'accepted', practice: { odsCode: practiceOds, name: practiceByOds(practiceOds)?.name ?? practiceOds } })
     },
   )
@@ -683,11 +680,21 @@ export async function providerRoutes(app: FastifyInstance) {
       const actor = auth(req)
       requireClinician(actor)
       const consent = await ownConsent(actor, req.params.id)
-      const events = (await app.services.audit.forConsent(consent.id, { limit: 500 })).filter(
-        e => e.type === 'access.document.send' && e.outcome === 'success',
-      )
-      return Promise.all(
-        events.reverse().map(async e => {
+      const all = (await app.services.audit.forConsent(consent.id, { limit: 500 })).filter(e => e.type.startsWith('access.document.send'))
+      const sent = all.filter(e => e.type === 'access.document.send' && e.outcome === 'success')
+      // Attempts with no recorded outcome: the document may have been sent.
+      const unconfirmed = unresolvedAttempts(all).map(e => ({
+        messageId: null,
+        title: String(e.details?.title ?? ''),
+        kind: String(e.details?.kind ?? ''),
+        sentAt: e.recordedAt,
+        sentBy: providerUserById(e.actor.id)?.name ?? e.actor.id,
+        status: 'unconfirmed' as const,
+        statusAt: null,
+        statusNote: null,
+      }))
+      const delivered = await Promise.all(
+        sent.map(async e => {
           const messageId = String(e.details?.messageId)
           let status: Awaited<ReturnType<typeof app.services.adapters.mesh.status>> = null
           try {
@@ -707,6 +714,7 @@ export async function providerRoutes(app: FastifyInstance) {
           }
         }),
       )
+      return [...delivered, ...unconfirmed].sort((a, b) => (a.sentAt < b.sentAt ? 1 : -1))
     },
   )
 }

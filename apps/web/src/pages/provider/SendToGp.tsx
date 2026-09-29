@@ -5,11 +5,11 @@ import { Button, Card, ErrorBox, Notice } from '../../ui'
 import { REASON_TEXT } from './types'
 
 interface SentDocument {
-  messageId: string
+  messageId: string | null
   title: string
   sentAt: string
   sentBy: string
-  status: 'accepted' | 'downloaded' | 'acknowledged' | 'rejected' | 'unknown'
+  status: 'accepted' | 'downloaded' | 'acknowledged' | 'rejected' | 'unknown' | 'unconfirmed'
   statusAt: string | null
   statusNote: string | null
 }
@@ -20,6 +20,7 @@ const STATUS_TEXT: Record<SentDocument['status'], string> = {
   acknowledged: 'Filed by the practice',
   rejected: 'Rejected by the practice',
   unknown: 'Status unknown',
+  unconfirmed: 'Not confirmed: it may have been sent',
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -157,11 +158,15 @@ export default function SendToGp({ consentId }: { consentId: string }) {
         ) : (
           <ul className="space-y-2">
             {sent.map(d => (
-              <li key={d.messageId}>
+              <li key={d.messageId ?? `${d.sentAt}-${d.title}`}>
                 <Card className="text-sm">
                   <div className="flex flex-wrap justify-between gap-2">
                     <span className="font-semibold">{d.title}</span>
-                    <span className={d.status === 'rejected' ? 'text-red-700' : d.status === 'acknowledged' ? 'text-green-700' : 'text-gray-700'}>
+                    <span
+                      className={
+                        d.status === 'rejected' || d.status === 'unconfirmed' ? 'text-red-700' : d.status === 'acknowledged' ? 'text-green-700' : 'text-gray-700'
+                      }
+                    >
                       {STATUS_TEXT[d.status]}
                     </span>
                   </div>
@@ -169,6 +174,11 @@ export default function SendToGp({ consentId }: { consentId: string }) {
                     Sent {formatDateTime(d.sentAt)} by {d.sentBy}
                     {d.statusNote && ` · ${d.statusNote}`}
                   </p>
+                  {d.status === 'unconfirmed' && (
+                    <p className="mt-1 text-red-700">
+                      The send started but its result was not recorded. Check with the practice before sending again, to avoid a duplicate.
+                    </p>
+                  )}
                 </Card>
               </li>
             ))}

@@ -108,7 +108,7 @@ function SignIn({ onDone }: { onDone: () => void }) {
 interface Overview {
   store: string
   consents: Record<string, number>
-  audit: { lastSeq: number; recentWindow: number; recentDenied: number; recentFailures: number; recentRecordAccess: number }
+  audit: { lastSeq: number; recentWindow: number; recentDenied: number; recentFailures: number; recentRecordAccess: number; unconfirmedSends: number }
   faults: Record<string, { kind: string; ms?: number }>
 }
 
@@ -144,10 +144,11 @@ function Overview() {
       </section>
       <section>
         <h3 className="mb-2 font-semibold">Last {data.audit.recentWindow} audit events</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Stat label="Record accesses" value={data.audit.recentRecordAccess} />
           <Stat label="Refused by policy" value={data.audit.recentDenied} tone={data.audit.recentDenied ? 'text-amber-700' : ''} />
           <Stat label="Failures" value={data.audit.recentFailures} tone={data.audit.recentFailures ? 'text-red-700' : ''} />
+          <Stat label="Sends not confirmed" value={data.audit.unconfirmedSends} tone={data.audit.unconfirmedSends ? 'text-red-700' : ''} />
           <Stat label="Events in total" value={data.audit.lastSeq} />
         </div>
       </section>
