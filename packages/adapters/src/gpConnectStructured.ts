@@ -71,7 +71,7 @@ export function buildStructuredRecordRequest(input: {
   now?: Date
 }): GpConnectExchange {
   const url = `${input.endpoint.address}/Patient/$gpc.getstructuredrecord`
-  const claims = buildJwtClaims({ aud: url, nhsNumber: input.nhsNumber, nhsNumberSystem: NHS_NUMBER_SYSTEM_1X, requester: input.requester, now: input.now ?? new Date() })
+  const claims = buildJwtClaims({ version: '1.x', url, nhsNumber: input.nhsNumber, nhsNumberSystem: NHS_NUMBER_SYSTEM_1X, requester: input.requester, now: input.now ?? new Date() })
   return {
     url,
     jwtClaims: claims,

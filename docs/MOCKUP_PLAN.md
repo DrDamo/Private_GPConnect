@@ -192,3 +192,10 @@ Private_GPConnect/
   - **Portal:** a *Structured data* tab parsed with the Demonstrator's extractors, and a FHIR bundle download. The API offers `format=bundle` for provider systems.
   - **Checks:** the policy decision point checks the action and every area, so SMS (view-only) consent can't retrieve structured data. Every retrieval is audited and appears in the patient's log.
   - **Found along the way:** the Demonstrator's builder parses any value with a unit using `parseFloat`, so "138/86 mmHg" becomes 138. This needs fixing upstream.
+- [x] **Conformance with real GP Connect traffic** (29 Sep 2026). A real Access Record HTML 0.7.2 request/response pair (ALL section) from the GP Connect Demonstrator is kept in `packages/fixtures/gpconnect-examples/`, and tests check the simulator and the protocol code against it. Corrections made:
+  - The JWT `aud` is the fixed `https://authorize.fhir.nhs.net/token` (we had used the request URL).
+  - JWT resources are DSTU2-shaped (single HumanName, `practitionerRole`), and `sub` equals `requesting_practitioner.id`. The device and organisation carry ids.
+  - Access Record HTML 0.7.x is **FHIR DSTU2**, not STU3. Structured 1.x remains STU3.
+  - Simulated responses now carry the real Composition shape (profile, class, author, `fullUrl` entries for Practitioner, Organization and Patient) and `class="date-column"` on date cells.
+  - The sanitiser is checked to keep all real content, with only `xmlns` dropped, and to strip scripts, handlers, links, images, styles and iframes.
+  - **Still to verify:** the 1.x (Structured) JWT `aud` and the SDS job role code a real consumer should send.

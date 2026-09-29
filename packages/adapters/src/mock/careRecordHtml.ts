@@ -1,9 +1,11 @@
 import type { HtmlSection } from '@pgpc/core'
 import type { SimClinicalRecord, SimPatient } from '@pgpc/fixtures'
 
-// PLACEHOLDER HTML in the general style of GP Connect Access Record HTML
-// sections (headings + tables, "No 'X' data is recorded" messages, exclusion
-// banners). To be replaced by real dummy examples from the GP Connect team.
+// PLACEHOLDER HTML in the style of GP Connect Access Record HTML sections
+// (headings + tables with the same ids, class="date-column" on date cells,
+// "No 'X' data is recorded" messages, exclusion banners). The Allergies (ALL)
+// section's structure is checked against a real example in
+// fixtures/gpconnect-examples/html; other sections await real examples.
 
 export const SECTION_TITLES: Record<HtmlSection, string> = {
   SUM: 'Summary',
@@ -32,7 +34,9 @@ function table(id: string, heading: string, columns: string[], rows: string[][])
     return `<div><h2>${esc(heading)}</h2><p>No '${esc(heading)}' data is recorded for this patient.</p></div>`
   }
   const head = columns.map(c => `<th>${esc(c)}</th>`).join('')
-  const body = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')
+  // As in real output, date columns are marked class="date-column".
+  const cell = (c: string, i: number) => (/Date$|^Date$/.test(columns[i]) ? `<td class="date-column">${esc(c)}</td>` : `<td>${esc(c)}</td>`)
+  const body = rows.map(r => `<tr>${r.map(cell).join('')}</tr>`).join('')
   return `<div><h2>${esc(heading)}</h2><table id="${id}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
 }
 
@@ -73,7 +77,7 @@ export function renderSection(section: HtmlSection, patient: SimPatient, rec: Si
     ['Start Date', 'Details'],
     rec.allergies === 'no-known-allergies'
       ? [['', 'No known allergies']]
-      : rec.allergies.map(a => [gpcDate(a.recorded), `${a.substance}: ${a.reaction}`]),
+      : rec.allergies.map(a => [gpcDate(a.recorded), `Allergy to ${a.substance}, ${a.reaction}`]),
   )
   const acute = table(
     'med-tab-acu-med',

@@ -53,10 +53,10 @@ describe('buildCareRecordRequest', () => {
     })
     expect(ex.url).toMatch(/\/Patient\/\$gpc\.getcarerecord$/)
     const claims = decodeUnsignedJwt<GpConnectJwtClaims>(ex.headers.Authorization.replace('Bearer ', ''))!
-    expect(claims).toMatchObject({ aud: ex.url, reason_for_request: 'directcare', sub: 'sim-user-ph-pharm', requested_scope: 'patient/*.read' })
+    expect(claims).toMatchObject({ aud: 'https://authorize.fhir.nhs.net/token', reason_for_request: 'directcare', sub: 'sim-user-ph-pharm', requested_scope: 'patient/*.read' })
     expect(claims.exp - claims.iat).toBe(300)
     expect(claims.requesting_organization.identifier?.[0]?.value).toBe('SIMPH1')
-    expect(claims.requesting_practitioner.name?.[0]).toEqual({ family: 'Desai', given: ['Priya'] })
+    expect(claims.requesting_practitioner.name).toEqual({ family: ['Desai'], given: ['Priya'] })
     expect(ex.body.parameter?.[1]?.valueCodeableConcept?.coding?.[0]?.code).toBe('MED')
   })
 })
@@ -71,7 +71,7 @@ describe('GpConnectHtmlClient with simulated GP systems', () => {
   })
 
   it('shows allergies and "no data" messages', async () => {
-    expect((await fetchSection('9990000050', 'SIMGP2', 'ALL')).record.html).toContain('Penicillin: Widespread rash')
+    expect((await fetchSection('9990000050', 'SIMGP2', 'ALL')).record.html).toContain('Allergy to Penicillin, Widespread rash')
     expect((await fetchSection('9990000115', 'SIMGP2', 'PRB')).record.html).toContain("No 'Active Problems and Issues' data is recorded for this patient.")
   })
 
@@ -118,6 +118,7 @@ describe('simulated producer validates requests like a real one', () => {
     ['wrong Ssp-To', (ex: GpConnectExchange) => ({ ...ex, headers: { ...ex.headers, 'Ssp-To': '900000000102' } }), /Ssp-To/],
     ['no JWT', (ex: GpConnectExchange) => ({ ...ex, headers: { ...ex.headers, Authorization: '' } }), /JWT/],
     ['wrong audience', (ex: GpConnectExchange) => withClaims(ex, { aud: 'https://elsewhere' }), /aud/],
+    ['sub not the practitioner', (ex: GpConnectExchange) => withClaims(ex, { sub: 'someone-else' }), /sub must equal/],
     ['expired', (ex: GpConnectExchange) => withClaims(ex, { exp: Math.floor(NOW.getTime() / 1000) - 1 }), /expired/],
     ['not direct care', (ex: GpConnectExchange) => withClaims(ex, { reason_for_request: 'secondaryuses' as 'directcare' }), /directcare/],
     [

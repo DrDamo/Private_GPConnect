@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "url": "https://orange.testlab.nhs.uk/gpconnect-demonstrator/v0/fhir/Patient/$gpc.getcarerecord",
+  "headers": {
+    "Accept": "application/json+fhir",
+    "Ssp-TraceID": "09a01679-2564-0fb4-5129-aecc81ea2706",
+    "Ssp-From": "200000000359",
+    "Ssp-To": "918999198993",
+    "Ssp-InteractionID": "urn:nhs:names:services:gpconnect:fhir:operation:gpc.getcarerecord",
+    "Authorization": "Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.ewogImlzcyI6ICJodHRwczovL29yYW5nZS50ZXN0bGFiLm5ocy51ay8iLAogInN1YiI6ICIxIiwKICJhdWQiOiAiaHR0cHM6Ly9hdXRob3JpemUuZmhpci5uaHMubmV0L3Rva2VuIiwKICJleHAiOiAxNzkwNjg0NjMxLAogImlhdCI6IDE3OTA2ODQzMzEsCiAicmVhc29uX2Zvcl9yZXF1ZXN0IjogImRpcmVjdGNhcmUiLAogInJlcXVlc3RlZF9yZWNvcmQiOiB7CiAgInJlc291cmNlVHlwZSI6ICJQYXRpZW50IiwKICAiaWRlbnRpZmllciI6IFsKICAgewogICAgInN5c3RlbSI6ICJodHRwOi8vZmhpci5uaHMubmV0L0lkL25ocy1udW1iZXIiLAogICAgInZhbHVlIjogIjk2NTgyMTg4NzMiCiAgIH0KICBdCiB9LAogInJlcXVlc3RlZF9zY29wZSI6ICJwYXRpZW50LyoucmVhZCIsCiAicmVxdWVzdGluZ19kZXZpY2UiOiB7CiAgInJlc291cmNlVHlwZSI6ICJEZXZpY2UiLAogICJpZCI6ICIxIiwKICAiaWRlbnRpZmllciI6IFsKICAgIHsKICAgICAgInN5c3RlbSI6ICJodHRwczovL29yYW5nZS50ZXN0bGFiLm5ocy51ay9ncGNvbm5lY3QtZGVtb25zdHJhdG9yL0lkL2xvY2FsLXN5c3RlbS1pbnN0YW5jZS1pZCIsCiAgICAgICJ2YWx1ZSI6ICJncGNkZW1vbnN0cmF0b3ItMC1vcmFuZ2UiCiAgICB9CiAgXSwKICAibW9kZWwiOiAiR1AgQ29ubmVjdCBEZW1vbnN0cmF0b3IiLAogICJ2ZXJzaW9uIjogIjAuNy4yIgogfSwKICJyZXF1ZXN0aW5nX29yZ2FuaXphdGlvbiI6IHsKICAicmVzb3VyY2VUeXBlIjogIk9yZ2FuaXphdGlvbiIsCiAgImlkIjogIjEiLAogICJpZGVudGlmaWVyIjogWwogICB7CiAgICAic3lzdGVtIjogImh0dHA6Ly9maGlyLm5ocy5uZXQvSWQvb2RzLW9yZ2FuaXphdGlvbi1jb2RlIiwKICAgICJ2YWx1ZSI6ICJBMTExMTEiCiAgIH0KICBdLAogICJuYW1lIjogIkNvbnN1bWVyIG9yZ2FuaXNhdGlvbiBuYW1lIgogfSwKICJyZXF1ZXN0aW5nX3ByYWN0aXRpb25lciI6IHsKICAicmVzb3VyY2VUeXBlIjogIlByYWN0aXRpb25lciIsCiAgImlkIjogIjEiLAogICJpZGVudGlmaWVyIjogWwogICB7CiAgICAic3lzdGVtIjogImh0dHA6Ly9maGlyLm5ocy5uZXQvc2RzLXVzZXItaWQiLAogICAgInZhbHVlIjogIkcxMzU3OTEzNSIKICAgfSwKICAgewogICAgInN5c3RlbSI6ICJodHRwczovL29yYW5nZS50ZXN0bGFiLm5ocy51ay9ncGNvbm5lY3QtZGVtb25zdHJhdG9yL0lkL2xvY2FsLXVzZXItaWQiLAogICAgInZhbHVlIjogIjEiCiAgIH0KICBdLAogICJuYW1lIjogewogICAgImZhbWlseSI6IFsKICAgICAgIkRlbW9uc3RyYXRvciIKICAgIF0sCiAgICAiZ2l2ZW4iOiBbCiAgICAgICJHUENvbm5lY3QiCiAgICBdLAogICAgInByZWZpeCI6IFsKICAgICAgIk1yIgogICAgXQogIH0sCiAgInByYWN0aXRpb25lclJvbGUiOiBbCiAgICB7CiAgICAgICJyb2xlIjogewogICAgICAgICJjb2RpbmciOiBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJzeXN0ZW0iOiAiaHR0cDovL2ZoaXIubmhzLm5ldC9WYWx1ZVNldC9zZHMtam9iLXJvbGUtbmFtZS0xIiwKICAgICAgICAgICAgImNvZGUiOiAic2RzLWpvYi1yb2xlLW5hbWUiCiAgICAgICAgICB9CiAgICAgICAgXQogICAgICB9CiAgICB9CiAgXQogfQp9.",
+    "Content-Type": "application/json+fhir"
+  },
+  "body": {
+    "resourceType": "Parameters",
+    "parameter": [
+      { "name": "patientNHSNumber", "valueIdentifier": { "system": "http://fhir.nhs.net/Id/nhs-number", "value": "9658218873" } },
+      { "name": "recordSection", "valueCodeableConcept": { "coding": [ { "system": "http://fhir.nhs.net/ValueSet/gpconnect-record-section-1", "code": "ALL" } ] } }
+    ]
+  }
+}

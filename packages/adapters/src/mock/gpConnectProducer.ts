@@ -3,7 +3,9 @@ import { CLINICAL_AREAS, HTML_SECTIONS, type ClinicalArea, type HtmlSection } fr
 import { clinicalRecordFor, PATIENTS, PRACTICES, type SimPatient, type SimPractice } from '@pgpc/fixtures'
 import { AdapterError } from '../errors'
 import {
+  checkJwtClaims,
   decodeUnsignedJwt,
+  ODS_CODE_SYSTEM,
   GPC_NHS_NUMBER_SYSTEM,
   INTERACTION_GET_CARE_RECORD,
   RECORD_SECTION_SYSTEM,
@@ -33,13 +35,9 @@ function validateCommon(ex: GpConnectExchange, practice: SimPractice, now: Date,
   const token = h.Authorization?.replace(/^Bearer /, '') ?? ''
   const claims = decodeUnsignedJwt<GpConnectJwtClaims>(token)
   if (!claims) return fail('unauthorised', 'Authorization must carry an unsigned GP Connect JWT')
-  const nowS = Math.floor(now.getTime() / 1000)
-  if (claims.aud !== ex.url) fail('unauthorised', 'JWT aud does not match the request URL')
-  if (!(claims.exp > nowS) || claims.exp - claims.iat > 300) fail('unauthorised', 'JWT expired or lifetime over 5 minutes')
-  if (claims.iat > nowS + 60) fail('unauthorised', 'JWT issued in the future')
-  if (claims.reason_for_request !== 'directcare') fail('unauthorised', 'reason_for_request must be directcare')
-  if (!claims.requesting_organization?.identifier?.[0]?.value) fail('unauthorised', 'requesting_organization needs an ODS code')
-  if (!claims.requesting_practitioner?.identifier?.length) fail('unauthorised', 'requesting_practitioner needs an identifier')
+  const version = interactionId === INTERACTION_GET_CARE_RECORD ? '0.7' : '1.x'
+  const problems = checkJwtClaims(claims, { version, url: ex.url, now })
+  if (problems.length) fail('unauthorised', problems.join('; '))
   return claims
 }
 
@@ -76,8 +74,10 @@ function validateStructured(ex: GpConnectExchange, practice: SimPractice, now: D
   return { nhsNumber: nhsParam!.value!, areas }
 }
 
+/** Shaped like a real 0.7.2 getcarerecord response (see fixtures/gpconnect-examples/html). */
 function renderBundle(patient: SimPatient, practice: SimPractice, section: HtmlSection, now: Date): fhir3.Bundle {
   const html = renderSection(section, patient, clinicalRecordFor(patient.recordProfile))
+  const patientId = patient.nhsNumber
   return {
     resourceType: 'Bundle',
     type: 'searchset',
@@ -85,28 +85,65 @@ function renderBundle(patient: SimPatient, practice: SimPractice, section: HtmlS
       {
         resource: {
           resourceType: 'Composition',
+          meta: { profile: ['http://fhir.nhs.net/StructureDefinition/gpconnect-carerecord-composition-1'] },
           date: now.toISOString(),
-          status: 'final',
-          type: { coding: [{ system: 'http://snomed.info/sct', code: '425173008', display: 'record extract (record artifact)' }] },
+          type: {
+            coding: [{ system: 'http://snomed.info/sct', code: '425173008', display: 'record extract (record artifact)' }],
+            text: 'record extract (record artifact)',
+          },
+          class: {
+            coding: [{ system: 'http://snomed.info/sct', code: '700232004', display: 'general medical service (qualifier value)' }],
+            text: 'general medical service (qualifier value)',
+          },
           title: 'Patient Care Record',
-          subject: { reference: `Patient/${patient.nhsNumber}` },
-          author: [{ reference: `Organization/${practice.odsCode}` }],
+          status: 'final',
+          subject: { reference: `Patient/${patientId}` },
+          author: [{ reference: 'Practitioner/1' }],
           section: [
             {
               title: SECTION_TITLES[section],
-              code: { coding: [{ system: RECORD_SECTION_SYSTEM, code: section, display: SECTION_TITLES[section] }] },
+              code: {
+                coding: [{ system: RECORD_SECTION_SYSTEM, code: section, display: SECTION_TITLES[section] }],
+                text: SECTION_TITLES[section],
+              },
               text: { status: 'generated', div: html },
             },
           ],
-        } as fhir3.Composition,
+        } as unknown as fhir3.Composition,
       },
       {
+        fullUrl: 'Practitioner/1',
+        resource: {
+          resourceType: 'Practitioner',
+          id: '1',
+          meta: { profile: ['http://fhir.nhs.net/StructureDefinition/gpconnect-practitioner-1'] },
+          identifier: [{ system: 'http://fhir.nhs.net/Id/sds-user-id', value: 'SIM000000001' }],
+          // DSTU2 HumanName
+          name: { use: 'usual', family: ['Patel'], given: ['Asha'], prefix: ['Dr'] },
+        } as unknown as fhir3.Practitioner,
+      },
+      {
+        fullUrl: `Organization/${practice.odsCode}`,
         resource: {
           resourceType: 'Organization',
           id: practice.odsCode,
-          identifier: [{ value: practice.odsCode }],
+          meta: { profile: ['http://fhir.nhs.net/StructureDefinition/gpconnect-organization-1'] },
+          identifier: [{ system: ODS_CODE_SYSTEM, value: practice.odsCode }],
           name: practice.name,
         } as fhir3.Organization,
+      },
+      {
+        fullUrl: `Patient/${patientId}`,
+        resource: {
+          resourceType: 'Patient',
+          id: patientId,
+          meta: { profile: ['http://fhir.nhs.net/StructureDefinition/gpconnect-patient-1'] },
+          identifier: [{ system: GPC_NHS_NUMBER_SYSTEM, value: patient.nhsNumber }],
+          name: [{ use: 'usual', family: [patient.name.family], given: patient.name.given }],
+          gender: patient.gender,
+          birthDate: patient.birthDate,
+          careProvider: [{ reference: 'Practitioner/1' }],
+        } as unknown as fhir3.Patient,
       },
     ],
   }

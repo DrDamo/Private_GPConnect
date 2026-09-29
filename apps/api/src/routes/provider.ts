@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import sanitizeHtml from 'sanitize-html'
 import { AdapterError, displayName, signToken, verifyToken, type PdsPatient } from '@pgpc/adapters'
 import { extractAllergies, extractCodedData, extractConsultations, extractLists, extractMedications, extractProblems } from '@pgpc/gpc-fhir'
 import {
@@ -20,6 +19,7 @@ import {
 import { practiceByOds, PROVIDER_USERS, providerOrgByOds, providerUserById, type SimProviderOrg, type SimProviderUser } from '@pgpc/fixtures'
 import { HttpError } from '../errors'
 import { requestConsent } from '../flows/requestConsent'
+import { sanitiseGpHtml } from '../sanitise'
 
 // Provider portal and provider API (PLAN.md §4). Every read of patient data
 // goes through the policy decision point and is audited, whether it is
@@ -103,11 +103,6 @@ function consentSummary(c: ConsentRecord, now: Date, patientName?: string | null
   }
 }
 
-const SANITISE: sanitizeHtml.IOptions = {
-  allowedTags: ['div', 'h1', 'h2', 'h3', 'h4', 'p', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'ul', 'ol', 'li', 'b', 'i', 'strong', 'em', 'br', 'span'],
-  allowedAttributes: { '*': ['class', 'id', 'colspan', 'rowspan'] },
-  disallowedTagsMode: 'discard',
-}
 
 function noStore(_req: FastifyRequest, reply: FastifyReply, done: () => void) {
   reply.header('Cache-Control', 'no-store')
@@ -420,9 +415,11 @@ export async function providerRoutes(app: FastifyInstance) {
         return {
           section,
           title: record.title,
-          html: sanitizeHtml(record.html, SANITISE),
+          html: sanitiseGpHtml(record.html),
           generatedAt: record.generatedAt ?? null,
           practice: { odsCode: endpoint.odsCode, name: record.practice?.name ?? endpoint.odsCode, supplier: endpoint.supplier },
+          // Access Record HTML 0.7.x is FHIR DSTU2 (Structured is STU3).
+          fhirVersion: 'DSTU2',
           placeholder: true,
           viewedBy: actor.user.name,
           viewedAt: new Date().toISOString(),
