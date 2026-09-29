@@ -1,15 +1,84 @@
 import { describe, expect, it } from 'vitest'
-import { AuditLog, verifyChain } from '@pgpc/core'
+import { AuditLog, buildEvent, verifyChain, type ConsentRecord } from '@pgpc/core'
 import { auditStoreContract, consentRepositoryContract, otpStoreContract } from '@pgpc/core/testing'
 import { simMeshStoreContract, simOutboxContract } from '@pgpc/adapters/testing'
 import { PostgresAuditStore, PostgresConsentRepository, PostgresFaultSource, PostgresMeshStore, PostgresOtpStore, PostgresOutbox } from '../src'
-import { freshDatabase } from './pglite'
+import { freshDatabase, withPostgresJsBinding } from './pglite'
 
 auditStoreContract('postgres', async () => new PostgresAuditStore((await freshDatabase()).sql))
 consentRepositoryContract('postgres', async () => new PostgresConsentRepository((await freshDatabase()).sql))
 otpStoreContract('postgres', async () => new PostgresOtpStore((await freshDatabase()).sql))
 simMeshStoreContract('postgres', async () => new PostgresMeshStore((await freshDatabase()).sql))
 simOutboxContract('postgres', async () => new PostgresOutbox((await freshDatabase()).sql))
+
+// Again with the production driver's parameter binding (see withPostgresJsBinding).
+const pgjs = async () => withPostgresJsBinding((await freshDatabase()).sql)
+auditStoreContract('postgres, postgres.js binding', async () => new PostgresAuditStore(await pgjs()))
+consentRepositoryContract('postgres, postgres.js binding', async () => new PostgresConsentRepository(await pgjs()))
+simMeshStoreContract('postgres, postgres.js binding', async () => new PostgresMeshStore(await pgjs()))
+
+describe('rows written double-encoded before 30 Sep 2026', () => {
+  it('stores JSON objects, not JSON strings', async () => {
+    const { db, sql } = await freshDatabase()
+    const log = new AuditLog(new PostgresAuditStore(withPostgresJsBinding(sql)), { pseudonymKey: 'k' })
+    await log.record({ type: 't', outcome: 'success', actor: { type: 'system', id: 's' }, correlationId: 'c' })
+    const repo = new PostgresConsentRepository(withPostgresJsBinding(sql))
+    const consent = {
+      id: '10000000-0000-4000-8000-000000000002',
+      version: 1,
+      status: 'pending',
+      patient: { nhsNumber: '9990000018' },
+      provider: { odsCode: 'SIMPH1' },
+      requestedAt: '2026-09-30T09:00:00.000Z',
+    } as unknown as ConsentRecord
+    await repo.insert(consent)
+    await repo.update({ ...consent, version: 2 })
+    await new PostgresMeshStore(withPostgresJsBinding(sql)).add({
+      id: '20000000-0000-4000-8000-000000000001',
+      sentAt: '2026-09-30T09:00:00.000Z',
+      from: 'A',
+      to: 'B',
+      workflowId: 'W',
+      localId: 'L',
+      subject: 'S',
+      contentType: 'application/fhir+json',
+      content: { resourceType: 'Bundle' },
+      status: 'accepted',
+      statusAt: '2026-09-30T09:00:00.000Z',
+    })
+    const { rows } = await db.query<{ t: string }>(
+      `select jsonb_typeof(event) as t from pgpc.audit_events
+       union all select jsonb_typeof(record) from pgpc.consents
+       union all select jsonb_typeof(content) from pgpc.sim_mesh_messages`,
+    )
+    expect(rows).toEqual([{ t: 'object' }, { t: 'object' }, { t: 'object' }])
+  })
+
+  it('still reads a legacy string-encoded consent and audit event, and extends the chain after it', async () => {
+    const { db, sql } = await freshDatabase()
+    const legacy = buildEvent({ type: 't', outcome: 'success', actor: { type: 'system', id: 's' }, correlationId: 'c0' }, null, {
+      id: '00000000-0000-4000-8000-000000000001',
+      recordedAt: '2026-09-29T10:00:00.000Z',
+    })
+    await db.query(
+      `insert into pgpc.audit_events (seq, id, recorded_at, type, outcome, correlation_id, prev_hash, hash, event)
+       values (1, $1, $2, 't', 'success', 'c0', $3, $4, to_jsonb($5::text))`,
+      [legacy.id, legacy.recordedAt, legacy.prevHash, legacy.hash, JSON.stringify(legacy)],
+    )
+    const store = new PostgresAuditStore(sql)
+    await new AuditLog(store, { pseudonymKey: 'k' }).record({ type: 't', outcome: 'success', actor: { type: 'system', id: 's' }, correlationId: 'c1' })
+    expect((await store.list({ limit: 10 })).map(e => e.seq)).toEqual([1, 2])
+    expect(await verifyChain(store)).toMatchObject({ valid: true, checked: 2 })
+
+    const record = { id: '10000000-0000-4000-8000-000000000001', patient: { nhsNumber: '9990000018' } }
+    await db.query(
+      `insert into pgpc.consents (id, version, status, nhs_number, provider_ods, requested_at, record)
+       values ($1, 1, 'pending', '9990000018', 'SIMPH1', now(), to_jsonb($2::text))`,
+      [record.id, JSON.stringify(record)],
+    )
+    expect(await new PostgresConsentRepository(sql).get(record.id)).toEqual(record)
+  })
+})
 
 describe('audit_events table is append-only', () => {
   const seeded = async () => {

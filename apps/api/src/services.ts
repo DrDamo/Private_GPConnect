@@ -43,6 +43,7 @@ import {
   PostgresMeshStore,
   PostgresOtpStore,
   PostgresOutbox,
+  type SqlClient,
 } from '@pgpc/store-postgres'
 
 export interface Adapters {
@@ -106,25 +107,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
       throw new Error('AUDIT_PSEUDONYM_KEY (at least 32 characters) is required when DATABASE_URL is set')
     }
     const sql = createPostgresClient(env.DATABASE_URL)
-    return assemble({
-      storeKind: 'postgres',
-      repository: new PostgresConsentRepository(sql),
-      auditStore: new PostgresAuditStore(sql),
-      outbox: new PostgresOutbox(sql),
-      otpStore: new PostgresOtpStore(sql),
-      meshStore: new PostgresMeshStore(sql),
-      faults: new PostgresFaultSource(sql),
-      secret: env.AUDIT_PSEUDONYM_KEY,
-      ping: async () => {
-        try {
-          await sql.query('select 1')
-          return true
-        } catch {
-          return false
-        }
-      },
-      close: () => sql.close(),
-    })
+    return postgresServices(sql, env.AUDIT_PSEUDONYM_KEY, () => sql.close())
   }
   return assemble({
     storeKind: 'memory',
@@ -137,6 +120,29 @@ export function createServices(env: ServiceEnv = process.env): Services {
     secret: env.AUDIT_PSEUDONYM_KEY || DEV_SECRET,
     ping: async () => true,
     close: async () => {},
+  })
+}
+
+/** Services on Postgres through any SQL client (postgres.js in production, PGlite in tests). */
+export function postgresServices(sql: SqlClient, secret: string, close: () => Promise<void> = async () => {}): Services {
+  return assemble({
+    storeKind: 'postgres',
+    repository: new PostgresConsentRepository(sql),
+    auditStore: new PostgresAuditStore(sql),
+    outbox: new PostgresOutbox(sql),
+    otpStore: new PostgresOtpStore(sql),
+    meshStore: new PostgresMeshStore(sql),
+    faults: new PostgresFaultSource(sql),
+    secret,
+    ping: async () => {
+      try {
+        await sql.query('select 1')
+        return true
+      } catch {
+        return false
+      }
+    },
+    close,
   })
 }
 

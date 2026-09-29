@@ -1,11 +1,12 @@
 import type { AuditEvent, AuditQuery, AuditStore, ChainTail } from '@pgpc/core'
+import { fromJsonb } from './json'
 import type { SqlClient } from './sql'
 
 // Serialises appends across all server instances with a transaction-scoped
 // advisory lock, so the chain can never fork. The lock is released on commit.
 const APPEND_LOCK_KEY = 7_303_001
 
-type Row = { event: AuditEvent }
+type Row = { event: unknown }
 
 export class PostgresAuditStore implements AuditStore {
   private readonly sql: SqlClient
@@ -16,12 +17,12 @@ export class PostgresAuditStore implements AuditStore {
   append(build: (tail: ChainTail | null) => AuditEvent): Promise<AuditEvent> {
     return this.sql.transaction(async tx => {
       await tx.query('select pg_advisory_xact_lock($1)', [APPEND_LOCK_KEY])
-      const [last] = await tx.query<Row>('select event from pgpc.audit_events order by seq desc limit 1')
-      const event = build(last ? { seq: last.event.seq, hash: last.event.hash } : null)
+      const [last] = await tx.query<ChainTail>('select seq, hash from pgpc.audit_events order by seq desc limit 1')
+      const event = build(last ? { seq: Number(last.seq), hash: last.hash } : null)
       await tx.query(
         `insert into pgpc.audit_events
            (seq, id, recorded_at, type, outcome, patient_ref, consent_id, correlation_id, prev_hash, hash, event)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)`,
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text::jsonb)`,
         [
           event.seq,
           event.id,
@@ -62,6 +63,6 @@ export class PostgresAuditStore implements AuditStore {
         order by seq ${query.order === 'desc' ? 'desc' : 'asc'} limit $${params.length}`,
       params,
     )
-    return rows.map(r => r.event)
+    return rows.map(r => fromJsonb<AuditEvent>(r.event))
   }
 }

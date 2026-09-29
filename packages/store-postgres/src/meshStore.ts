@@ -1,4 +1,5 @@
 import type { MeshMessage, MeshStatus, SimMeshStore } from '@pgpc/adapters'
+import { fromJsonb } from './json'
 import type { SqlClient } from './sql'
 
 type Row = {
@@ -26,7 +27,7 @@ const toMessage = (r: Row): MeshMessage => ({
   localId: r.local_id,
   subject: r.subject,
   contentType: r.content_type,
-  content: r.content,
+  content: fromJsonb(r.content),
   status: r.status,
   statusAt: iso(r.status_at),
   ...(r.status_note ? { statusNote: r.status_note } : {}),
@@ -42,7 +43,7 @@ export class PostgresMeshStore implements SimMeshStore {
     await this.sql.query(
       `insert into pgpc.sim_mesh_messages
          (id, sent_at, from_mailbox, to_mailbox, workflow_id, local_id, subject, content_type, content, status, status_at, status_note)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)`,
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::text::jsonb, $10, $11, $12)`,
       [m.id, m.sentAt, m.from, m.to, m.workflowId, m.localId, m.subject, m.contentType, JSON.stringify(m.content), m.status, m.statusAt, m.statusNote ?? null],
     )
   }

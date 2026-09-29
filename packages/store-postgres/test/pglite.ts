@@ -34,3 +34,22 @@ export async function freshDatabase(): Promise<{ db: PGlite; sql: SqlClient }> {
   const db = (await (await template).clone()) as PGlite
   return { db, sql: wrap(db, db.transaction.bind(db)) }
 }
+
+/**
+ * Binds parameters the way postgres.js does in production: a value bound
+ * directly to a `$n::jsonb` placeholder is JSON-encoded by the driver. PGlite
+ * passes it through, which hid a double-encoding bug; run stores through this
+ * so they must bind jsonb as text (`$n::text::jsonb`).
+ */
+export function withPostgresJsBinding(sql: SqlClient): SqlClient {
+  return {
+    query<T>(text: string, params: unknown[] = []) {
+      const encoded = [...params]
+      for (const [, n] of text.matchAll(/\$(\d+)::jsonb/g)) encoded[Number(n) - 1] = JSON.stringify(params[Number(n) - 1])
+      return sql.query<T>(text, encoded)
+    },
+    transaction<T>(fn: (tx: SqlClient) => Promise<T>) {
+      return sql.transaction(tx => fn(withPostgresJsBinding(tx)))
+    },
+  }
+}
