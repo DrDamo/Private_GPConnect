@@ -91,6 +91,12 @@ describe('structured record from the simulated GP system', () => {
     expect(extractConsultations(record.bundle)).toHaveLength(2)
   })
 
+  it('no allergies recorded: an empty List, distinct from a coded "no known allergy"', async () => {
+    const { record } = await fetchRecord('9990000034', ['allergies'])
+    expect(extractAllergies(record.bundle)).toEqual([])
+    expect(extractLists(record.bundle).find(l => l.title?.startsWith('Allergies'))?.emptyReason).toBeTruthy()
+  })
+
   it('an empty area comes back as an empty List, not missing', async () => {
     const { record } = await fetchRecord('9990000115', ['problems'])
     expect(record.areas).toEqual(['problems'])

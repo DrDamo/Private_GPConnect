@@ -1,0 +1,17 @@
+{
+  "title": "Allergies and Adverse Reactions",
+  "code": {
+    "coding": [
+      {
+        "system": "http://fhir.nhs.net/ValueSet/gpconnect-record-section-1",
+        "code": "ALL",
+        "display": "Allergies and Adverse Reactions"
+      }
+    ],
+    "text": "Allergies and Adverse Reactions"
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><h1>Allergies and Adverse Reactions</h1><div><h2>Current Allergies and Adverse Reactions</h2><p>No 'Current Allergies and Adverse Reactions' data is recorded for this patient.</p></div><div><h2>Historical Allergies and Adverse Reactions</h2><p>No 'Historical Allergies and Adverse Reactions' data is recorded for this patient.</p></div></div>"
+  }
+}

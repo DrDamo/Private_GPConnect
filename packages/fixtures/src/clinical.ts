@@ -97,7 +97,8 @@ const RECORDS: Record<RecordProfile, SimClinicalRecord> = {
       { name: 'Metformin 500mg tablets', dosage: 'One tablet twice a day with meals', quantity: '112 tablets', type: 'Repeat', lastIssued: '2026-09-01', started: '2021-05-19' },
       { name: 'Atorvastatin 20mg tablets', dosage: 'One tablet at night', quantity: '28 tablets', type: 'Repeat', lastIssued: '2026-09-01', started: '2022-02-11' },
     ],
-    allergies: 'no-known-allergies',
+    // Nothing recorded at all (not the same as a coded 'No known allergy').
+    allergies: [],
     observations: [
       { name: 'Body weight', snomed: '27113001', value: '102.4 kg', date: '2026-08-14' },
       { name: 'Body mass index', snomed: '60621009', value: '36.4 kg/m²', date: '2026-08-14' },

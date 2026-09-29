@@ -209,3 +209,14 @@ describe('real PATIENT_NOT_FOUND (also returned when the patient has dissented t
     }
   })
 })
+
+describe('third real Allergies example: no allergies recorded at all', () => {
+  const real3 = JSON.parse(readFileSync(new URL('demonstrator-0.7.2-ALL-3.section.json', dir), 'utf8')).text.div as string
+
+  it('our section is byte-for-byte the real one', async () => {
+    const patient = PATIENTS.find(p => p.nhsNumber === '9990000034')!
+    const endpoint = (await new MockSds().getGpConnectEndpoint(patient.gpOdsCode))!
+    const ex = buildCareRecordRequest({ nhsNumber: patient.nhsNumber, section: 'ALL', endpoint, requester, consumer: MIDDLEWARE, traceId: 't', now: new Date() })
+    expect(parseCareRecordResponse(interpretGpConnectResponse(await simulatedGpSystems()(ex)), 'ALL').html).toBe(real3)
+  })
+})

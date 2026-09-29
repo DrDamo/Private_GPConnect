@@ -14,6 +14,7 @@ alongside them instead.
 |---|---|---|
 | `demonstrator-0.7.2-ALL.*` | Access Record HTML, `recordSection=ALL`: full request, response and headers | See below |
 | `demonstrator-0.7.2-ALL-2.section.json` | The ALL section only (Composition.section), for a patient with no current allergies and one historical allergy | The empty-table message, and `class="date-column"` on **both** date columns of the historical table |
+| `demonstrator-0.7.2-ALL-3.section.json` | The ALL section for a patient with no allergies | The section is still returned, with the "No '…' data is recorded" message in both tables |
 | `demonstrator-0.7.2-PATIENT_NOT_FOUND.response.json` | The error response (HTTP 404, OperationOutcome) | The error shape and codes. **The GP Connect team confirmed the same response is returned when the patient has dissented to sharing**, so a consumer can't, and mustn't try to, tell the two apart |
 
 What the ALL example confirmed:
