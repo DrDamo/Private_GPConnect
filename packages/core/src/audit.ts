@@ -51,13 +51,35 @@ export interface ChainTail {
  */
 export interface AuditStore {
   append(build: (tail: ChainTail | null) => AuditEvent): Promise<AuditEvent>
-  /** Events in ascending seq order, starting after `afterSeq`. */
-  list(query: {
-    afterSeq?: number
-    limit: number
-    patientRef?: string
-    consentId?: string
-  }): Promise<AuditEvent[]>
+  /**
+   * Events matching the filters. Ascending from `afterSeq` by default; with
+   * order 'desc', newest first from before `beforeSeq`.
+   */
+  list(query: AuditQuery): Promise<AuditEvent[]>
+}
+
+export interface AuditQuery {
+  limit: number
+  afterSeq?: number
+  beforeSeq?: number
+  order?: 'asc' | 'desc'
+  patientRef?: string
+  consentId?: string
+  /** Exact type, or a prefix ending in '.', e.g. 'access.' */
+  type?: string
+  outcome?: AuditOutcome
+}
+
+/** Shared filter semantics for store implementations. */
+export function matchesAuditQuery(e: AuditEvent, q: AuditQuery): boolean {
+  return (
+    (q.afterSeq === undefined || e.seq > q.afterSeq) &&
+    (q.beforeSeq === undefined || e.seq < q.beforeSeq) &&
+    (q.patientRef === undefined || e.patientRef === q.patientRef) &&
+    (q.consentId === undefined || e.consentId === q.consentId) &&
+    (q.outcome === undefined || e.outcome === q.outcome) &&
+    (q.type === undefined || (q.type.endsWith('.') ? e.type.startsWith(q.type) : e.type === q.type))
+  )
 }
 
 /** JSON with object keys sorted recursively, so hashing is independent of key order. */
@@ -158,6 +180,11 @@ export class AuditLog {
 
   forPatient(nhsNumber: string, options: { afterSeq?: number; limit?: number } = {}): Promise<AuditEvent[]> {
     return this.store.list({ patientRef: this.patientRef(nhsNumber), limit: options.limit ?? 100, afterSeq: options.afterSeq })
+  }
+
+  /** Newest first, for consoles. */
+  latest(query: Omit<AuditQuery, 'order' | 'afterSeq'>): Promise<AuditEvent[]> {
+    return this.store.list({ ...query, order: 'desc' })
   }
 
   forConsent(consentId: string, options: { afterSeq?: number; limit?: number } = {}): Promise<AuditEvent[]> {

@@ -20,6 +20,9 @@ export class Browser {
   async get(url: string) {
     return this.store(await this.app.inject({ method: 'GET', url, headers: { cookie: this.cookie } }))
   }
+  async put(url: string, payload: unknown = {}) {
+    return this.store(await this.app.inject({ method: 'PUT', url, payload: payload as object, headers: { cookie: this.cookie } }))
+  }
   async post(url: string, payload: unknown = {}) {
     return this.store(await this.app.inject({ method: 'POST', url, payload: payload as object, headers: { cookie: this.cookie } }))
   }

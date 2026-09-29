@@ -38,3 +38,17 @@ export const PROVIDER_USERS: SimProviderUser[] = [
 
 export const providerOrgByOds = (odsCode: string) => PROVIDER_ORGS.find(o => o.odsCode === odsCode)
 export const providerUserById = (userId: string) => PROVIDER_USERS.find(u => u.userId === userId)
+
+/** Staff who run the service itself (not provider staff). Least privilege: auditors can only read. */
+export interface SimAdminUser {
+  userId: string
+  name: string
+  role: 'auditor' | 'operator'
+}
+
+export const ADMIN_USERS: SimAdminUser[] = [
+  { userId: 'sim-admin-auditor', name: 'Alex Reed (IG auditor)', role: 'auditor' },
+  { userId: 'sim-admin-operator', name: 'Sam Patel (service operator)', role: 'operator' },
+]
+
+export const adminUserById = (userId: string) => ADMIN_USERS.find(u => u.userId === userId)

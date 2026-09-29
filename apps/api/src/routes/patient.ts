@@ -135,6 +135,8 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
       if (failed) return `${provider} tried to look at your ${part} but your GP system could not be reached`
       return `${provider} looked at your ${part}`
     }
+    case 'admin.audit.view':
+      return 'Staff running this service reviewed the log of access to your record'
     case 'access.document.send': {
       const title = typeof e.details?.title === 'string' ? e.details.title : 'a document'
       if (e.outcome === 'denied') return `${provider} tried to send your GP practice "${title}" but was not allowed`

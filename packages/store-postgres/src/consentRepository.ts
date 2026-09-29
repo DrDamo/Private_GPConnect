@@ -1,4 +1,4 @@
-import { ConcurrentModificationError, type ConsentRecord, type ConsentRepository } from '@pgpc/core'
+import { ConcurrentModificationError, type ConsentRecord, type ConsentRepository, type ConsentStatus } from '@pgpc/core'
 import type { SqlClient } from './sql'
 
 type Row = { record: ConsentRecord }
@@ -46,6 +46,13 @@ export class PostgresConsentRepository implements ConsentRepository {
       'select record from pgpc.consents where provider_ods = $1 order by requested_at desc',
       [odsCode],
     )
+    return rows.map(r => r.record)
+  }
+
+  async list(query: { status?: ConsentStatus; limit: number }) {
+    const rows = query.status
+      ? await this.sql.query<Row>('select record from pgpc.consents where status = $1 order by requested_at desc limit $2', [query.status, query.limit])
+      : await this.sql.query<Row>('select record from pgpc.consents order by requested_at desc limit $1', [query.limit])
     return rows.map(r => r.record)
   }
 }

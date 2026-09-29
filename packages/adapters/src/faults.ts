@@ -10,15 +10,27 @@ export interface FaultSource {
   get(adapter: AdapterName): Promise<Fault | null>
 }
 
-/** Faults held in memory (per server instance). A shared store comes in step 8. */
-export class InMemoryFaultSource implements FaultSource {
+/** A fault source an operator can change (admin console). */
+export interface FaultControl extends FaultSource {
+  set(adapter: AdapterName, fault: Fault | null): Promise<void> | void
+  all(): Promise<Partial<Record<AdapterName, Fault>>>
+}
+
+export const ADAPTER_NAMES: AdapterName[] = ['pds', 'sds', 'nhs-login', 'sms', 'gp-connect', 'mesh']
+
+/** Faults held in memory (one server instance; tests and local development). */
+export class InMemoryFaultSource implements FaultControl {
   private readonly faults = new Map<AdapterName, Fault>()
   async get(adapter: AdapterName) {
     return this.faults.get(adapter) ?? null
   }
+  /** Applies immediately (synchronously), so tests needn't await it. */
   set(adapter: AdapterName, fault: Fault | null) {
     if (fault) this.faults.set(adapter, fault)
     else this.faults.delete(adapter)
+  }
+  async all() {
+    return Object.fromEntries(this.faults) as Partial<Record<AdapterName, Fault>>
   }
 }
 

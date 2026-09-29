@@ -18,8 +18,9 @@ const personas: Array<{ title: string; description: string; step: number; href?:
   },
   {
     title: 'Admin & audit',
-    description: 'Tamper-evident audit trail, consent register, provider organisations and fault injection.',
+    description: 'Tamper-evident audit trail with integrity check, consent register and fault injection.',
     step: 8,
+    href: '/admin',
   },
   {
     title: 'GP practice inbox',

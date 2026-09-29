@@ -66,6 +66,24 @@ export function auditStoreContract(name: string, makeStore: () => Promise<AuditS
       expect(result).toMatchObject({ valid: true, checked: 20 })
     })
 
+    it('lists newest first with beforeSeq, and filters by type prefix and outcome', async () => {
+      const store = await makeStore()
+      const kinds: Array<[string, 'success' | 'denied']> = [
+        ['access.html.view', 'success'],
+        ['consent.granted', 'success'],
+        ['access.html.view', 'denied'],
+        ['access.structured.retrieve', 'success'],
+      ]
+      for (const [i, [type, outcome]] of kinds.entries()) {
+        await store.append(tail => buildEvent({ ...input(i + 1), type, outcome }, tail, { id: crypto.randomUUID(), recordedAt: NOW.toISOString() }))
+      }
+      expect((await store.list({ limit: 2, order: 'desc' })).map(e => e.seq)).toEqual([4, 3])
+      expect((await store.list({ limit: 10, order: 'desc', beforeSeq: 3 })).map(e => e.seq)).toEqual([2, 1])
+      expect((await store.list({ limit: 10, type: 'access.' })).map(e => e.seq)).toEqual([1, 3, 4])
+      expect((await store.list({ limit: 10, type: 'access.html.view', outcome: 'denied' })).map(e => e.seq)).toEqual([3])
+      expect((await store.list({ limit: 10, type: 'access' })).map(e => e.seq)).toEqual([])
+    })
+
     it('pages with afterSeq and limit, and filters by patientRef and consentId', async () => {
       const store = await makeStore()
       await appendN(store, 6)
@@ -114,6 +132,17 @@ export function consentRepositoryContract(name: string, makeRepo: () => Promise<
       expect(await repo.get(r.id)).toEqual(granted)
       // A second writer still holding version 1 must lose.
       await expect(repo.update(grantConsent(r, decision, NOW))).rejects.toBeInstanceOf(ConcurrentModificationError)
+    })
+
+    it('lists everything newest first, optionally by status', async () => {
+      const repo = await makeRepo()
+      const a = request('10000000-0000-4000-8000-000000000011', '9692136701', 'PHX01', new Date('2026-10-01T00:00:00Z'))
+      await repo.insert(a)
+      await repo.insert(request('10000000-0000-4000-8000-000000000012', '9692136701', 'PHX01', new Date('2026-10-02T00:00:00Z')))
+      await repo.update(grantConsent(a, decision, NOW))
+      expect((await repo.list({ limit: 10 })).map(r => r.id.slice(-2))).toEqual(['12', '11'])
+      expect((await repo.list({ status: 'active', limit: 10 })).map(r => r.id.slice(-2))).toEqual(['11'])
+      expect(await repo.list({ limit: 1 })).toHaveLength(1)
     })
 
     it('lists by patient and by provider, newest first', async () => {

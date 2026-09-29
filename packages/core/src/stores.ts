@@ -1,4 +1,5 @@
-import type { AuditEvent, AuditStore, ChainTail } from './audit'
+import { matchesAuditQuery, type AuditEvent, type AuditQuery, type AuditStore, type ChainTail } from './audit'
+import type { ConsentStatus } from './types'
 import type { ConsentRecord } from './consent'
 
 export interface ConsentRepository {
@@ -11,6 +12,8 @@ export interface ConsentRepository {
   update(record: ConsentRecord): Promise<void>
   listByPatient(nhsNumber: string): Promise<ConsentRecord[]>
   listByProvider(odsCode: string): Promise<ConsentRecord[]>
+  /** All consents, newest first (stored status; apply effectiveStatus for time-based expiry). */
+  list(query: { status?: ConsentStatus; limit: number }): Promise<ConsentRecord[]>
 }
 
 export class ConcurrentModificationError extends Error {
@@ -50,6 +53,14 @@ export class InMemoryConsentRepository implements ConsentRepository {
   async listByProvider(odsCode: string) {
     return [...this.records.values()].filter(r => r.provider.odsCode === odsCode).sort(newestFirst).map(clone)
   }
+
+  async list(query: { status?: ConsentStatus; limit: number }) {
+    return [...this.records.values()]
+      .filter(r => !query.status || r.status === query.status)
+      .sort(newestFirst)
+      .slice(0, query.limit)
+      .map(clone)
+  }
 }
 
 export class InMemoryAuditStore implements AuditStore {
@@ -68,16 +79,10 @@ export class InMemoryAuditStore implements AuditStore {
     return run
   }
 
-  async list(query: { afterSeq?: number; limit: number; patientRef?: string; consentId?: string }) {
-    return this.events
-      .filter(
-        e =>
-          e.seq > (query.afterSeq ?? 0) &&
-          (query.patientRef === undefined || e.patientRef === query.patientRef) &&
-          (query.consentId === undefined || e.consentId === query.consentId),
-      )
-      .slice(0, query.limit)
-      .map(clone)
+  async list(query: AuditQuery) {
+    const matching = this.events.filter(e => matchesAuditQuery(e, query))
+    const ordered = query.order === 'desc' ? matching.slice().reverse() : matching
+    return ordered.slice(0, query.limit).map(clone)
   }
 
   /** Test helper: direct access to stored events, e.g. to simulate tampering. */

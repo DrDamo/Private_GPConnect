@@ -1,4 +1,4 @@
-import type { AuditEvent, AuditStore, ChainTail } from '@pgpc/core'
+import type { AuditEvent, AuditQuery, AuditStore, ChainTail } from '@pgpc/core'
 import type { SqlClient } from './sql'
 
 // Serialises appends across all server instances with a transaction-scoped
@@ -40,20 +40,26 @@ export class PostgresAuditStore implements AuditStore {
     })
   }
 
-  async list(query: { afterSeq?: number; limit: number; patientRef?: string; consentId?: string }) {
-    const where = ['seq > $1']
-    const params: unknown[] = [query.afterSeq ?? 0]
-    if (query.patientRef !== undefined) {
-      params.push(query.patientRef)
-      where.push(`patient_ref = $${params.length}`)
+  async list(query: AuditQuery) {
+    const where: string[] = []
+    const params: unknown[] = []
+    const add = (sql: string, value: unknown) => {
+      params.push(value)
+      where.push(sql.replace('?', `$${params.length}`))
     }
-    if (query.consentId !== undefined) {
-      params.push(query.consentId)
-      where.push(`consent_id = $${params.length}`)
+    if (query.afterSeq !== undefined) add('seq > ?', query.afterSeq)
+    if (query.beforeSeq !== undefined) add('seq < ?', query.beforeSeq)
+    if (query.patientRef !== undefined) add('patient_ref = ?', query.patientRef)
+    if (query.consentId !== undefined) add('consent_id = ?', query.consentId)
+    if (query.outcome !== undefined) add('outcome = ?', query.outcome)
+    if (query.type !== undefined) {
+      if (query.type.endsWith('.')) add("type like ? || '%'", query.type.replace(/[%_\\]/g, m => `\\${m}`))
+      else add('type = ?', query.type)
     }
     params.push(query.limit)
     const rows = await this.sql.query<Row>(
-      `select event from pgpc.audit_events where ${where.join(' and ')} order by seq limit $${params.length}`,
+      `select event from pgpc.audit_events ${where.length ? `where ${where.join(' and ')}` : ''}
+        order by seq ${query.order === 'desc' ? 'desc' : 'asc'} limit $${params.length}`,
       params,
     )
     return rows.map(r => r.event)

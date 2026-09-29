@@ -7,6 +7,7 @@ is synthetic.
 
 - Plan: [`docs/PLAN.md`](docs/PLAN.md)
 - Mock-up plan: [`docs/MOCKUP_PLAN.md`](docs/MOCKUP_PLAN.md)
+- Demo script: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
 ## Layout
 

@@ -15,6 +15,7 @@ import {
   withFaults,
   type GpConnectHtmlAdapter,
   type GpConnectStructuredAdapter,
+  type FaultControl,
   type MeshAdapter,
   type SimMeshStore,
   type NhsLoginAdapter,
@@ -38,6 +39,7 @@ import {
   createPostgresClient,
   PostgresAuditStore,
   PostgresConsentRepository,
+  PostgresFaultSource,
   PostgresMeshStore,
   PostgresOtpStore,
   PostgresOutbox,
@@ -57,7 +59,7 @@ export interface Simulator {
   /** Mock NHS login, for the persona picker to issue codes. */
   nhsLogin: MockNhsLogin
   outbox: SimOutbox
-  faults: InMemoryFaultSource
+  faults: FaultControl
   /** Simulated MESH mailboxes / practice inboxes. */
   mesh: SimMeshStore
 }
@@ -74,6 +76,8 @@ export interface Services {
   sessionKey: string
   /** HMAC key for provider session tokens. */
   providerSessionKey: string
+  /** HMAC key for service admin session tokens. */
+  adminSessionKey: string
   /** Cheap connectivity check for /api/health. */
   ping(): Promise<boolean>
   close(): Promise<void>
@@ -109,6 +113,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
       outbox: new PostgresOutbox(sql),
       otpStore: new PostgresOtpStore(sql),
       meshStore: new PostgresMeshStore(sql),
+      faults: new PostgresFaultSource(sql),
       secret: env.AUDIT_PSEUDONYM_KEY,
       ping: async () => {
         try {
@@ -128,6 +133,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
     outbox: new InMemoryOutbox(),
     otpStore: new InMemoryOtpStore(),
     meshStore: new InMemoryMeshStore(),
+    faults: new InMemoryFaultSource(),
     secret: env.AUDIT_PSEUDONYM_KEY || DEV_SECRET,
     ping: async () => true,
     close: async () => {},
@@ -141,12 +147,13 @@ function assemble(parts: {
   outbox: SimOutbox
   otpStore: OtpStore
   meshStore: SimMeshStore
+  faults: FaultControl
   secret: string
   ping: Services['ping']
   close: Services['close']
 }): Services {
   const audit = new AuditLog(parts.auditStore, { pseudonymKey: parts.secret })
-  const faults = new InMemoryFaultSource()
+  const faults = parts.faults
   const nhsLogin = new MockNhsLogin({ signingKey: deriveKey(parts.secret, 'sim-nhs-login-signing') })
   return {
     storeKind: parts.storeKind,
@@ -156,6 +163,7 @@ function assemble(parts: {
     otp: new OtpService({ store: parts.otpStore, key: deriveKey(parts.secret, 'otp-code-hash') }),
     sessionKey: deriveKey(parts.secret, 'patient-session'),
     providerSessionKey: deriveKey(parts.secret, 'provider-session'),
+    adminSessionKey: deriveKey(parts.secret, 'admin-session'),
     adapters: {
       pds: withFaults('pds', new MockPds(), ['getPatient', 'search'], faults),
       sds: withFaults('sds', new MockSds(), ['getGpConnectEndpoint'], faults),

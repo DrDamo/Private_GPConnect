@@ -1,5 +1,6 @@
 import SimulationBanner from './SimulationBanner'
 import Link from './Link'
+import AdminConsole from './pages/admin/AdminConsole'
 import Home from './pages/Home'
 import TestPatients from './pages/TestPatients'
 import Callback from './pages/patient/Callback'
@@ -19,6 +20,7 @@ type Route = [RegExp, (params: string[]) => React.JSX.Element]
 const routes: Route[] = [
   [/^\/$/, () => <Home />],
   [/^\/test-patients$/, () => <TestPatients />],
+  [/^\/admin$/, () => <AdminConsole />],
   [/^\/patient$/, () => <PatientHome />],
   [/^\/patient\/callback$/, () => <Callback />],
   [/^\/patient\/consent\/([0-9a-fA-F-]{36})$/, ([id]) => <ConsentReview key={id} id={id} />],
@@ -65,7 +67,7 @@ export default function App() {
             </h1>
             <p className="mt-1 text-white/80">Consent-based access to GP records for independent healthcare providers — working mock-up</p>
           </div>
-          <nav className="flex gap-4 text-sm">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <Link className="underline" href="/provider">
               Provider
             </Link>
@@ -83,6 +85,9 @@ export default function App() {
             </Link>
             <Link className="underline" href="/test-patients">
               Test patients
+            </Link>
+            <Link className="underline" href="/admin">
+              Admin
             </Link>
           </nav>
         </div>

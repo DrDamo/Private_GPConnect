@@ -213,3 +213,13 @@ Private_GPConnect/
   - **Design decision (for the Clinical Safety Officer):** text-message consent now covers notifying the GP as well as viewing, because telling the GP is the safety-positive direction. It still excludes structured copying.
   - **⚠ Unverified:** the Send Document Bundle structure, the MessageHeader event and the MESH workflow id (`GPFED_CONSULT_REPORT`). These need a real example.
   - **Open question:** after consent is withdrawn, the provider can no longer notify the GP. Is that right, or should notifying the GP about care already given survive withdrawal?
+- [x] **Step 8:** admin and audit console, fault injection, and a demo script.
+  - **Roles:** simulated sign-in for two least-privilege staff roles. An *IG auditor* can read; a *service operator* can also inject faults. The real service would use staff SSO with MFA.
+  - **Overview:** consents by effective status, plus recent record accesses, policy refusals and failures.
+  - **Chain verification:** a *Verify the chain now* button walks the whole hash chain. The verification is itself audited, and tests show it detects a tampered event.
+  - **Audit trail:** newest first, filtered by event type (prefix), outcome, or NHS number. The NHS number is converted to its pseudonym and is never stored or shown.
+  - **Watching the watchers:** every search of the audit trail is itself audited. A search by NHS number appears in that patient's access log as "Staff running this service reviewed the log of access to your record".
+  - **Consent register:** NHS numbers are masked (`*** *** 0050`).
+  - **Fault injection:** per national service (PDS, SDS, NHS login, SMS, GP Connect, MESH), set to slow, timing out or unavailable. It's operator-only and audited. With Postgres, faults are held in `pgpc.sim_faults`, so they apply across serverless instances within about 2 seconds.
+  - **Demo script:** [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md), a 20-minute stakeholder walkthrough covering the happy paths, refusals, oversight and faults.
+  - **Not done:** there's no demo-data reset. The hosted demo accumulates data, and resetting it would mean deleting from an append-only audit table, which the database deliberately blocks.
