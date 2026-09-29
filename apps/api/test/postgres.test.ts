@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { SqlClient } from '@pgpc/store-postgres'
 import type { FastifyInstance } from 'fastify'
 import { freshDatabase } from '../../../packages/store-postgres/test/pglite'
 import { buildApp } from '../src/app'
 import { postgresServices } from '../src/services'
-import { Browser, patientGrants } from './helpers'
+import { Browser, patientGrants, signInWithNhsLogin } from './helpers'
 
 // The hosted demo runs on Postgres; the other API tests use in-memory stores.
 // This runs the main journeys through the real Postgres stores (on PGlite), so a
@@ -42,5 +43,55 @@ describe('API on Postgres', () => {
     const audit = (await admin.get('/api/admin/audit?nhsNumber=9990000018')).json() as Array<{ type: string }>
     expect(audit.map(e => e.type)).toContain('access.html.view')
     expect((await admin.get('/api/admin/audit/verify')).json()).toMatchObject({ valid: true })
+  })
+})
+
+/** Makes audit appends fail on demand, as a lost connection or full disk would. */
+function failingAudit(sql: SqlClient, state: { fail: boolean }): SqlClient {
+  return {
+    query(text, params) {
+      if (state.fail && text.includes('insert into pgpc.audit_events')) return Promise.reject(new Error('audit write failed'))
+      return sql.query(text, params)
+    },
+    transaction: fn => sql.transaction(tx => fn(failingAudit(tx, state))),
+  }
+}
+
+describe('a consent change and its audit event are atomic', () => {
+  it('does not keep a consent request, or a grant, whose audit event failed', async () => {
+    const { db, sql } = await freshDatabase()
+    const state = { fail: false }
+    const app = await buildApp({ services: postgresServices(failingAudit(sql, state), 'k'.repeat(32)) })
+    const count = async (where = 'true') =>
+      (await db.query<{ n: number }>(`select count(*)::int as n from pgpc.consents where ${where}`)).rows[0].n
+    try {
+      const provider = new Browser(app)
+      await provider.post('/api/provider/sim-login', { userId: 'sim-user-ph-pharm' })
+
+      state.fail = true
+      const refused = await provider.post('/api/provider/consent-requests', { nhsNumber: '9990000018', purpose: 'Supply of medicine' })
+      expect(refused.statusCode).toBe(500)
+      expect(await count()).toBe(0)
+
+      state.fail = false
+      const req = await provider.post('/api/provider/consent-requests', { nhsNumber: '9990000018', purpose: 'Supply of medicine' })
+      expect(req.statusCode).toBe(201)
+      const consentId = req.json().consent.id as string
+
+      const patient = new Browser(app)
+      await signInWithNhsLogin(patient, 'sim-nhslogin-0001')
+      const view = (await patient.get(`/api/patient/consents/${consentId}`)).json()
+      state.fail = true
+      const grant = await patient.post(`/api/patient/consents/${consentId}/decision`, {
+        decision: 'grant',
+        consentTextVersion: view.consentTextVersion,
+        consentTextHash: view.consentTextHash,
+      })
+      expect(grant.statusCode).toBe(500)
+      expect(await count("status = 'active'")).toBe(0)
+      expect(await count("status = 'pending'")).toBe(1)
+    } finally {
+      await app.close()
+    }
   })
 })

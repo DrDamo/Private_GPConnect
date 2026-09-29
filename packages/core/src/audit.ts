@@ -157,13 +157,20 @@ export class AuditLog {
   private readonly newId: () => string
   private readonly store: AuditStore
   private readonly pseudonymKey: string
+  private readonly options: AuditLogOptions
 
   constructor(store: AuditStore, options: AuditLogOptions) {
     if (!options.pseudonymKey) throw new Error('AuditLog requires a pseudonymKey')
     this.store = store
+    this.options = options
     this.pseudonymKey = options.pseudonymKey
     this.clock = options.clock ?? (() => new Date())
     this.newId = options.newId ?? (() => crypto.randomUUID())
+  }
+
+  /** The same log (key, clock, ids) writing through another store, e.g. one bound to a transaction. */
+  using(store: AuditStore): AuditLog {
+    return new AuditLog(store, this.options)
   }
 
   patientRef(nhsNumber: string): string {

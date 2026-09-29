@@ -1,6 +1,6 @@
 # Open items
 
-Collated on 29 Sep 2026, at the end of mock-up step 8, from `PLAN.md`, `MOCKUP_PLAN.md`
+Collated on 29 Sep 2026 (updated 30 Sep), at the end of mock-up step 8, from `PLAN.md`, `MOCKUP_PLAN.md`
 and the working sessions. The detail and references are in the linked sections.
 
 ## A. Questions for you
@@ -62,6 +62,16 @@ Already verified against real traffic: the HTML 0.7.2 request (JWT, headers, bod
 | E5 | Swap in real HTML examples as they arrive (C1) and correct against C2–C6 | |
 | E6 | Implement the outcome of A5 and B1 | |
 | E7 | A source adaptor for IM1 Patient Facing Services, if D6 is pursued | The architecture already allows the source adaptor to be swapped |
+| E8 | ✅ **Done (30 Sep): consent changes and their audit events are atomic.** On Postgres, each consent request, grant, decline or withdrawal commits in one transaction with its audit event, so neither can exist without the other. A test forces the audit write to fail and checks that the consent change is rolled back | Found in the hosted database after the jsonb bug (see G1): two consents saved while their audit writes were failing |
+| E9 | Audit *before* external side effects as well as after. Sending a document over MESH, or a consent text message, can't share a database transaction | At present, if the audit write fails after a successful send, the document is delivered with no audit entry, and the provider sees an error and may resend. Fix: record the attempt first, then the outcome. Record views already fail safe: no audit, no record shown |
+| E10 | A smoke test against the hosted demo after each deploy (sign in, request, grant, view, admin) | Every earlier browser check ran on the local in-memory store, which is how G1 went unnoticed |
+
+## G. Incidents and known data issues
+
+| # | What | Status |
+|---|---|---|
+| G1 | **Hosted demo returned 500s on almost every action (29 Sep).** The stores bound pre-serialised JSON to `jsonb` parameters, so the production driver (postgres.js) stored every consent, audit event and MESH message as a JSON *string*. The tests use PGlite, which doesn't do this, so they passed | Fixed in `4a743c4`: values are bound as text, legacy string rows are decoded on read, and the store tests also run with postgres.js-style parameter binding. Checked in Supabase: new rows are objects and the audit chain (events 1–21) is intact |
+| G2 | **Two consents in the hosted database have no "consent requested" audit event** (`47436111…`, still pending; and `791195c4…`, later granted). They were saved while the audit writes were failing (G1) | Left as they are. The audit table is append-only by design, so the gap can't be back-filled without breaking that guarantee. E8 prevents a repeat. Treat these as test data, or remove them with a demo reset (E1) |
 
 ## F. Non-coding issues raised (policy, IG, clinical safety, commercial)
 

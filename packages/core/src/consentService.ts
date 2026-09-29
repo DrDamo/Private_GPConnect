@@ -14,11 +14,20 @@ import type { ConsentRepository } from './stores'
 import type { JsonValue } from './types'
 
 // Orchestrates the pure consent transitions with persistence and audit. Every
-// state change is audited after it is stored; a failed attempt is audited too.
+// state change and its audit event are written in one unit of work, so neither
+// can exist without the other; a failed attempt is audited too.
+
+/**
+ * Runs `work` atomically: on Postgres, one transaction for the consent write and
+ * its audit event. The default runs it directly, which is atomic enough for the
+ * in-memory stores (their writes can't fail after validation).
+ */
+export type ConsentUnitOfWork = <T>(work: (tx: { repository: ConsentRepository; audit: AuditLog }) => Promise<T>) => Promise<T>
 
 export interface ConsentServiceOptions {
   repository: ConsentRepository
   audit: AuditLog
+  unitOfWork?: ConsentUnitOfWork
   clock?: () => Date
   newId?: () => string
 }
@@ -48,10 +57,12 @@ export class ConsentService {
   private readonly audit: AuditLog
   private readonly clock: () => Date
   private readonly newId: () => string
+  private readonly unitOfWork: ConsentUnitOfWork
 
   constructor(options: ConsentServiceOptions) {
     this.repository = options.repository
     this.audit = options.audit
+    this.unitOfWork = options.unitOfWork ?? (work => work({ repository: options.repository, audit: options.audit }))
     this.clock = options.clock ?? (() => new Date())
     this.newId = options.newId ?? (() => crypto.randomUUID())
   }
@@ -70,15 +81,17 @@ export class ConsentService {
       await this.auditFailure('consent.requested', actor, input.nhsNumber, undefined, err, ctx)
       throw err
     }
-    await this.repository.insert(record)
-    await this.audit.record({
-      type: 'consent.requested',
-      outcome: 'success',
-      actor,
-      nhsNumber: record.patient.nhsNumber,
-      consentId: record.id,
-      correlationId: ctx.correlationId,
-      details: { ...scopeDetails(record), episodeId: record.episode.id },
+    await this.unitOfWork(async tx => {
+      await tx.repository.insert(record)
+      await tx.audit.record({
+        type: 'consent.requested',
+        outcome: 'success',
+        actor,
+        nhsNumber: record.patient.nhsNumber,
+        consentId: record.id,
+        correlationId: ctx.correlationId,
+        details: { ...scopeDetails(record), episodeId: record.episode.id },
+      })
     })
     return record
   }
@@ -141,15 +154,17 @@ export class ConsentService {
       await this.auditFailure(type, actor, current.patient.nhsNumber, id, err, ctx)
       throw err
     }
-    await this.repository.update(next)
-    await this.audit.record({
-      type,
-      outcome: 'success',
-      actor,
-      nhsNumber: next.patient.nhsNumber,
-      consentId: id,
-      correlationId: ctx.correlationId,
-      details: { ...scopeDetails(next), ...extraDetails },
+    await this.unitOfWork(async tx => {
+      await tx.repository.update(next)
+      await tx.audit.record({
+        type,
+        outcome: 'success',
+        actor,
+        nhsNumber: next.patient.nhsNumber,
+        consentId: id,
+        correlationId: ctx.correlationId,
+        details: { ...scopeDetails(next), ...extraDetails },
+      })
     })
     return next
   }

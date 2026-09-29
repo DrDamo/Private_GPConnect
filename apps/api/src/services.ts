@@ -133,6 +133,8 @@ export function postgresServices(sql: SqlClient, secret: string, close: () => Pr
     otpStore: new PostgresOtpStore(sql),
     meshStore: new PostgresMeshStore(sql),
     faults: new PostgresFaultSource(sql),
+    // A consent change and its audit event commit together or not at all.
+    transaction: work => sql.transaction(tx => work({ repository: new PostgresConsentRepository(tx), auditStore: new PostgresAuditStore(tx) })),
     secret,
     ping: async () => {
       try {
@@ -154,6 +156,8 @@ function assemble(parts: {
   otpStore: OtpStore
   meshStore: SimMeshStore
   faults: FaultControl
+  /** Runs work in one database transaction; stores without transactions omit it. */
+  transaction?: <T>(work: (tx: { repository: ConsentRepository; auditStore: AuditStore }) => Promise<T>) => Promise<T>
   secret: string
   ping: Services['ping']
   close: Services['close']
@@ -164,7 +168,14 @@ function assemble(parts: {
   return {
     storeKind: parts.storeKind,
     audit,
-    consents: new ConsentService({ repository: parts.repository, audit }),
+    consents: new ConsentService({
+      repository: parts.repository,
+      audit,
+      ...(parts.transaction && {
+        unitOfWork: <T>(work: (tx: { repository: ConsentRepository; audit: AuditLog }) => Promise<T>) =>
+          parts.transaction!(tx => work({ repository: tx.repository, audit: audit.using(tx.auditStore) })),
+      }),
+    }),
     consentRepository: parts.repository,
     otp: new OtpService({ store: parts.otpStore, key: deriveKey(parts.secret, 'otp-code-hash') }),
     sessionKey: deriveKey(parts.secret, 'patient-session'),
