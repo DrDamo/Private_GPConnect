@@ -12,7 +12,8 @@ alongside them instead.
 
 | File | Interaction | What it confirmed |
 |---|---|---|
-| `html/demonstrator-0.7.2-ALL.*` | Access Record HTML, `recordSection=ALL` | See below |
+| `demonstrator-0.7.2-ALL.*` | Access Record HTML, `recordSection=ALL`: full request, response and headers | See below |
+| `demonstrator-0.7.2-ALL-2.section.json` | The ALL section only (Composition.section), for a patient with no current allergies and one historical allergy | The empty-table message, and `class="date-column"` on **both** date columns of the historical table |
 
 What the ALL example confirmed:
 

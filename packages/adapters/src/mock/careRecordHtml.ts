@@ -77,7 +77,15 @@ export function renderSection(section: HtmlSection, patient: SimPatient, rec: Si
     ['Start Date', 'Details'],
     rec.allergies === 'no-known-allergies'
       ? [['', 'No known allergies']]
-      : rec.allergies.map(a => [gpcDate(a.recorded), `Allergy to ${a.substance}, ${a.reaction}`]),
+      : rec.allergies.filter(a => !a.ended).map(a => [gpcDate(a.recorded), `Allergy to ${a.substance}, ${a.reaction}`]),
+  )
+  const historicalAllergies = table(
+    'all-tab-hist',
+    'Historical Allergies and Adverse Reactions',
+    ['Start Date', 'End Date', 'Details'],
+    rec.allergies === 'no-known-allergies'
+      ? []
+      : rec.allergies.filter(a => a.ended).map(a => [gpcDate(a.recorded), gpcDate(a.ended!), `Allergy to ${a.substance}, ${a.reaction}`]),
   )
   const acute = table(
     'med-tab-acu-med',
@@ -98,7 +106,7 @@ export function renderSection(section: HtmlSection, patient: SimPatient, rec: Si
   const bodies: Record<HtmlSection, string> = {
     SUM: [activeProblems, allergies, acute, repeat, encounters(visibleEncounters.slice(0, 3))].join(''),
     PRB: [activeProblems, inactiveProblems, otherInactive].join(''),
-    ALL: [allergies, table('all-tab-hist', 'Historical Allergies and Adverse Reactions', ['Start Date', 'End Date', 'Details'], [])].join(''),
+    ALL: [allergies, historicalAllergies].join(''),
     MED: [acute, repeat, table('med-tab-past-med', 'Past Medications', ['Type', 'Start Date', 'Medication Item', 'Dosage Instruction'], [])].join(''),
     ENC: encounters(),
     CLI: table('cli-tab', 'Clinical Items', ['Date', 'Entry', 'Details'], rec.observations.map(o => [gpcDate(o.date), o.name, o.value])),

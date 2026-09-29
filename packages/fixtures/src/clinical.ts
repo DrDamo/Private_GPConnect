@@ -33,6 +33,8 @@ export interface SimAllergy {
   snomed?: string
   reaction: string
   recorded: string
+  /** Set for a resolved (historical) allergy. */
+  ended?: string
 }
 
 export interface SimObservation {
@@ -169,7 +171,8 @@ const RECORDS: Record<RecordProfile, SimClinicalRecord> = {
   minimal: {
     problems: [],
     medications: [],
-    allergies: 'no-known-allergies',
+    // No current allergies, one historical: mirrors a real GP Connect example.
+    allergies: [{ substance: 'Adhesive plaster', reaction: 'Skin allergy', recorded: '2015-05-01', ended: '2015-05-01' }],
     observations: [],
     encounters: [{ date: '2026-09-24', clinician: 'Reception (simulated)', type: 'Administrative', summary: 'New patient registration. Previous records requested.' }],
     immunisations: [],

@@ -137,3 +137,31 @@ describe('our simulated response matches the real one', () => {
     expect(PATIENTS.some(p => p.nhsNumber === '9990000050')).toBe(true)
   })
 })
+
+describe('second real Allergies example: no current, one historical', () => {
+  const real2 = JSON.parse(readFileSync(new URL('demonstrator-0.7.2-ALL-2.section.json', dir), 'utf8')).text.div as string
+
+  async function ourAllergies(nhsNumber: string) {
+    const patient = PATIENTS.find(p => p.nhsNumber === nhsNumber)!
+    const endpoint = (await new MockSds().getGpConnectEndpoint(patient.gpOdsCode))!
+    const ex = buildCareRecordRequest({ nhsNumber, section: 'ALL', endpoint, requester, consumer: MIDDLEWARE, traceId: 't', now: new Date() })
+    return parseCareRecordResponse(await simulatedGpSystems()(ex), 'ALL').html
+  }
+
+  it('our empty "current" block is character-for-character the real one', async () => {
+    const block = /<div><h2>Current Allergies and Adverse Reactions<\/h2><p>.*?<\/p><\/div>/.exec(real2)![0]
+    expect(await ourAllergies('9990000115')).toContain(block)
+  })
+
+  it('our historical table has the same structure, with date-column on both date cells', async () => {
+    const ours = await ourAllergies('9990000115')
+    const skeleton = (html: string) =>
+      /<div><h2>Historical[^<]*<\/h2>.*?<\/table><\/div>/.exec(html)![0].replace(/(<td[^>]*>)[^<]*(<\/td>)/g, '$1$2')
+    expect(skeleton(ours)).toBe(skeleton(real2))
+  })
+
+  it('the whole section has the same overall skeleton as the real one', async () => {
+    const strip = (html: string) => html.replace(/(<td[^>]*>)[^<]*(<\/td>)/g, '$1$2')
+    expect(strip(await ourAllergies('9990000115'))).toBe(strip(real2))
+  })
+})
