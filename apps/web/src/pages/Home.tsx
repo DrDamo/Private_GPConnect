@@ -5,7 +5,7 @@ const personas: Array<{ title: string; description: string; step: number; href?:
   {
     title: 'Provider clinician',
     description:
-      'Find a patient on PDS, ask for consent, then view their GP record. Sending documents to the GP comes in step 7.',
+      'Find a patient on PDS, ask for consent, view their GP record or import structured data, and send the GP a summary.',
     step: 5,
     href: '/provider',
   },
@@ -23,8 +23,9 @@ const personas: Array<{ title: string; description: string; step: number; href?:
   },
   {
     title: 'GP practice inbox',
-    description: 'What the practice receives through GP Connect Send Document (simulated MESH).',
+    description: 'What the practice receives through GP Connect Send Document (simulated MESH), to read and file.',
     step: 7,
+    href: '/sim/practice',
   },
 ]
 

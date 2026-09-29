@@ -11,6 +11,7 @@ import RecordView from './pages/provider/RecordView'
 import DemoRequest from './pages/sim/DemoRequest'
 import NhsLoginSim from './pages/sim/NhsLoginSim'
 import Phone from './pages/sim/Phone'
+import PracticeInbox from './pages/sim/PracticeInbox'
 import { useLocation } from './router'
 
 type Route = [RegExp, (params: string[]) => React.JSX.Element]
@@ -26,6 +27,7 @@ const routes: Route[] = [
   [/^\/provider\/record\/([0-9a-fA-F-]{36})$/, ([id]) => <RecordView key={id} consentId={id} />],
   [/^\/sim\/nhs-login$/, () => <NhsLoginSim />],
   [/^\/sim\/phone$/, () => <Phone />],
+  [/^\/sim\/practice$/, () => <PracticeInbox />],
   [/^\/sim\/request$/, () => <DemoRequest />],
 ]
 
@@ -75,6 +77,9 @@ export default function App() {
             </Link>
             <Link className="underline" href="/sim/phone">
               Phone
+            </Link>
+            <Link className="underline" href="/sim/practice">
+              GP inbox
             </Link>
             <Link className="underline" href="/test-patients">
               Test patients

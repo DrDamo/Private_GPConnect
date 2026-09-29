@@ -189,7 +189,7 @@ describe('patient journey: text message code', () => {
     return { start, code, verify: (c = code, dob = birthDate) => browser.post('/api/patient/sms/verify', { challengeId: start.json().challengeId, code: c, birthDate: dob }) }
   }
 
-  it('signs in with code + date of birth, and can only agree to viewing for 30 days', async () => {
+  it('signs in with code + date of birth, and can only agree to viewing (and GP notification) for 30 days', async () => {
     const { consentId } = (await createRequest('sim-user-wm-doc', '9990000034')).json()
     const browser = new Browser()
     const { start, verify } = await smsSignIn(browser, consentId, '07700900003', '1990-07-25')
@@ -203,7 +203,11 @@ describe('patient journey: text message code', () => {
     expect((await browser.get('/api/patient/session')).json()).toMatchObject({ assurance: 'sms-otp', consentId })
 
     const view = (await browser.get(`/api/patient/consents/${consentId}`)).json()
-    expect(view).toMatchObject({ narrowedBySignIn: true, durationDays: 30, permissions: ['Look at parts of your GP record'] })
+    expect(view).toMatchObject({
+      narrowedBySignIn: true,
+      durationDays: 30,
+      permissions: ['Look at parts of your GP record', 'Send your GP practice details of any care or medicine they give you'],
+    })
     const granted = await browser.post(`/api/patient/consents/${consentId}/decision`, {
       decision: 'grant',
       consentTextVersion: view.consentTextVersion,
@@ -211,7 +215,7 @@ describe('patient journey: text message code', () => {
     })
     expect(granted.json()).toMatchObject({ status: 'active', decision: { via: 'sms' }, durationDays: 30 })
     const stored = await app.services.consentRepository.get(consentId)
-    expect(stored?.scope.actions).toEqual(['html.view'])
+    expect(stored?.scope.actions).toEqual(['html.view', 'document.send'])
 
     // A text-message session is limited to this one request.
     expect((await browser.get('/api/patient/me/consents')).statusCode).toBe(403)

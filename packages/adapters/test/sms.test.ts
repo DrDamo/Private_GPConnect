@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { AdapterError, InMemoryOutbox, MockSms } from '../src'
-import { simOutboxContract } from '../testing/contracts'
+import { AdapterError, InMemoryMeshStore, InMemoryOutbox, MockSms } from '../src'
+import { simMeshStoreContract, simOutboxContract } from '../testing/contracts'
 
 simOutboxContract('in-memory', async () => new InMemoryOutbox())
+simMeshStoreContract('in-memory', async () => new InMemoryMeshStore())
 
 const NOW = new Date('2026-10-01T09:00:00Z')
 

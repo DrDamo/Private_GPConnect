@@ -54,8 +54,10 @@ export const PROVIDER_PROFILES: Record<ProviderType, ProviderProfile> = {
 }
 
 // What each identity-assurance route may authorise (PLAN.md §2.4). SMS proves
-// control of a phone, not identity, so it is limited to view-only, short-lived
-// consent.
+// control of a phone, not identity, so it is limited to short-lived consent to
+// view, and to notify the patient's own GP (Send Document): information flowing
+// back to the GP is the safety-positive direction and is not blocked.
+// ⚠ Decision for the Clinical Safety Officer to confirm.
 export interface AssuranceRule {
   allowedActions: ConsentAction[]
   maxDurationDays: number
@@ -67,7 +69,7 @@ export const ASSURANCE_RULES: Record<AssuranceLevel, AssuranceRule> = {
     maxDurationDays: 180,
   },
   'sms-otp': {
-    allowedActions: ['html.view'],
+    allowedActions: ['html.view', 'document.send'],
     maxDurationDays: 30,
   },
 }

@@ -22,6 +22,7 @@ const ADAPTER_STATUS: Record<AdapterError['code'], number> = {
   unauthorised: 401,
   timeout: 504,
   unavailable: 503,
+  'not-supported': 422,
 }
 
 /**

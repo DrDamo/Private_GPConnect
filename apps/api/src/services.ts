@@ -4,7 +4,9 @@ import {
   GpConnectHtmlClient,
   GpConnectStructuredClient,
   InMemoryFaultSource,
+  InMemoryMeshStore,
   InMemoryOutbox,
+  MockMesh,
   MockNhsLogin,
   MockPds,
   MockSds,
@@ -13,6 +15,8 @@ import {
   withFaults,
   type GpConnectHtmlAdapter,
   type GpConnectStructuredAdapter,
+  type MeshAdapter,
+  type SimMeshStore,
   type NhsLoginAdapter,
   type PdsAdapter,
   type SdsAdapter,
@@ -34,6 +38,7 @@ import {
   createPostgresClient,
   PostgresAuditStore,
   PostgresConsentRepository,
+  PostgresMeshStore,
   PostgresOtpStore,
   PostgresOutbox,
 } from '@pgpc/store-postgres'
@@ -45,6 +50,7 @@ export interface Adapters {
   sms: SmsAdapter
   gpConnectHtml: GpConnectHtmlAdapter
   gpConnectStructured: GpConnectStructuredAdapter
+  mesh: MeshAdapter
 }
 
 export interface Simulator {
@@ -52,6 +58,8 @@ export interface Simulator {
   nhsLogin: MockNhsLogin
   outbox: SimOutbox
   faults: InMemoryFaultSource
+  /** Simulated MESH mailboxes / practice inboxes. */
+  mesh: SimMeshStore
 }
 
 export interface Services {
@@ -100,6 +108,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
       auditStore: new PostgresAuditStore(sql),
       outbox: new PostgresOutbox(sql),
       otpStore: new PostgresOtpStore(sql),
+      meshStore: new PostgresMeshStore(sql),
       secret: env.AUDIT_PSEUDONYM_KEY,
       ping: async () => {
         try {
@@ -118,6 +127,7 @@ export function createServices(env: ServiceEnv = process.env): Services {
     auditStore: new InMemoryAuditStore(),
     outbox: new InMemoryOutbox(),
     otpStore: new InMemoryOtpStore(),
+    meshStore: new InMemoryMeshStore(),
     secret: env.AUDIT_PSEUDONYM_KEY || DEV_SECRET,
     ping: async () => true,
     close: async () => {},
@@ -130,6 +140,7 @@ function assemble(parts: {
   auditStore: AuditStore
   outbox: SimOutbox
   otpStore: OtpStore
+  meshStore: SimMeshStore
   secret: string
   ping: Services['ping']
   close: Services['close']
@@ -157,8 +168,9 @@ function assemble(parts: {
         ['getStructuredRecord'],
         faults,
       ),
+      mesh: withFaults('mesh', new MockMesh(parts.meshStore), ['lookupMailbox', 'send', 'status'], faults),
     },
-    simulator: { nhsLogin, outbox: parts.outbox, faults },
+    simulator: { nhsLogin, outbox: parts.outbox, faults, mesh: parts.meshStore },
     ping: parts.ping,
     close: parts.close,
   }

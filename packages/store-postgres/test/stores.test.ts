@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { AuditLog, verifyChain } from '@pgpc/core'
 import { auditStoreContract, consentRepositoryContract, otpStoreContract } from '@pgpc/core/testing'
-import { simOutboxContract } from '@pgpc/adapters/testing'
-import { PostgresAuditStore, PostgresConsentRepository, PostgresOtpStore, PostgresOutbox } from '../src'
+import { simMeshStoreContract, simOutboxContract } from '@pgpc/adapters/testing'
+import { PostgresAuditStore, PostgresConsentRepository, PostgresMeshStore, PostgresOtpStore, PostgresOutbox } from '../src'
 import { freshDatabase } from './pglite'
 
 auditStoreContract('postgres', async () => new PostgresAuditStore((await freshDatabase()).sql))
 consentRepositoryContract('postgres', async () => new PostgresConsentRepository((await freshDatabase()).sql))
 otpStoreContract('postgres', async () => new PostgresOtpStore((await freshDatabase()).sql))
+simMeshStoreContract('postgres', async () => new PostgresMeshStore((await freshDatabase()).sql))
 simOutboxContract('postgres', async () => new PostgresOutbox((await freshDatabase()).sql))
 
 describe('audit_events table is append-only', () => {

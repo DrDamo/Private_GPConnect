@@ -4,7 +4,7 @@ import swagger from '@fastify/swagger'
 import { registerErrorHandler } from './errors'
 import { patientRoutes } from './routes/patient'
 import { providerRoutes } from './routes/provider'
-import { simulatorDemoRoutes, simulatorRoutes } from './routes/simulator'
+import { simulatorDemoRoutes, simulatorPracticeRoutes, simulatorRoutes } from './routes/simulator'
 import { createServices, type Services } from './services'
 
 // Everything the service does is simulated until real adapters exist. Every
@@ -92,6 +92,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
 
   await app.register(simulatorRoutes)
   await app.register(simulatorDemoRoutes)
+  await app.register(simulatorPracticeRoutes)
   await app.register(patientRoutes)
   await app.register(providerRoutes)
 

@@ -21,7 +21,7 @@ describe('renderConsentText', () => {
     const text = renderConsentText(record(), 'sms-otp')
     expect(text).toContain('- Look at parts of your GP record')
     expect(text).not.toContain('Copy parts')
-    expect(text).not.toContain('Send your GP practice')
+    expect(text).toContain('- Send your GP practice details of any care or medicine they give you')
     expect(text).toContain('This lasts for 30 days')
     expect(effectiveOffer(record(), 'sms-otp').narrowed).toBe(true)
     expect(effectiveOffer(record(), 'nhs-login-p9').narrowed).toBe(false)

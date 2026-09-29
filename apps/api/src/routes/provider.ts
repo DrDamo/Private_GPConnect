@@ -1,5 +1,15 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { AdapterError, displayName, signToken, verifyToken, type PdsPatient } from '@pgpc/adapters'
+import {
+  AdapterError,
+  buildSendDocumentBundle,
+  displayName,
+  SEND_DOCUMENT_WORKFLOW_ID,
+  signToken,
+  verifyToken,
+  type DocumentKind,
+  type PdsPatient,
+  type SuppliedMedicine,
+} from '@pgpc/adapters'
 import { extractAllergies, extractCodedData, extractConsultations, extractLists, extractMedications, extractProblems } from '@pgpc/gpc-fhir'
 import {
   ageOn,
@@ -16,7 +26,7 @@ import {
   type ConsentRecord,
   type HtmlSection,
 } from '@pgpc/core'
-import { practiceByOds, PROVIDER_USERS, providerOrgByOds, providerUserById, type SimProviderOrg, type SimProviderUser } from '@pgpc/fixtures'
+import { MIDDLEWARE, practiceByOds, PROVIDER_USERS, providerOrgByOds, providerUserById, type SimProviderOrg, type SimProviderUser } from '@pgpc/fixtures'
 import { HttpError } from '../errors'
 import { requestConsent } from '../flows/requestConsent'
 import { sanitiseGpHtml } from '../sanitise'
@@ -549,6 +559,154 @@ export async function providerRoutes(app: FastifyInstance) {
           body: exchange.body,
         },
       }
+    },
+  )
+
+  // ---- Send Document to the GP practice -------------------------------------------
+
+  const DEFAULT_TITLES: Record<DocumentKind, string> = {
+    'supply-notification': 'Notification of medicine supplied or prescribed',
+    'care-summary': 'Summary of care',
+  }
+
+  app.post<{
+    Params: { id: string }
+    Body: { kind: DocumentKind; title?: string; summary: string; medicines?: SuppliedMedicine[]; adviceForGp?: string }
+  }>(
+    '/api/provider/consents/:id/documents',
+    {
+      schema: {
+        summary: "Send a document to the patient's GP practice (GP Connect Send Document over MESH). Checked and audited",
+        tags,
+        body: {
+          type: 'object',
+          required: ['kind', 'summary'],
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string', enum: ['supply-notification', 'care-summary'] },
+            title: { type: 'string', minLength: 3, maxLength: 120 },
+            summary: { type: 'string', minLength: 10, maxLength: 4000 },
+            adviceForGp: { type: 'string', maxLength: 2000 },
+            medicines: {
+              type: 'array',
+              maxItems: 20,
+              items: {
+                type: 'object',
+                required: ['name', 'dosageInstruction', 'quantity', 'date'],
+                additionalProperties: false,
+                properties: {
+                  name: { type: 'string', minLength: 2, maxLength: 200 },
+                  dosageInstruction: { type: 'string', minLength: 2, maxLength: 500 },
+                  quantity: { type: 'string', minLength: 1, maxLength: 100 },
+                  date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const actor = auth(req)
+      const { audit, adapters } = app.services
+      const consent = await ownConsent(actor, req.params.id)
+      const nhsNumber = consent.patient.nhsNumber
+      const title = req.body.title ?? DEFAULT_TITLES[req.body.kind]
+      const base = { type: 'access.document.send', actor: auditActor(actor), nhsNumber, consentId: consent.id, correlationId: String(req.id) }
+      if (req.body.kind === 'supply-notification' && !req.body.medicines?.length) {
+        throw new HttpError(400, 'invalid-request', 'A supply notification must list at least one medicine')
+      }
+
+      const patient = await adapters.pds.getPatient(nhsNumber)
+      const decision = decide({
+        action: 'document.send',
+        actor: { userId: actor.user.userId, role: actor.user.role, active: actor.user.active, organisationOdsCode: actor.user.organisationOdsCode },
+        organisation: { odsCode: actor.org.odsCode, type: actor.org.type, active: actor.org.active },
+        patient: { nhsNumber, restricted: patient.restricted, deceased: patient.deceased, birthDate: patient.birthDate },
+        consent,
+        now: new Date(),
+      })
+      if (decision.decision === 'deny') {
+        await audit.record({ ...base, outcome: 'denied', details: { title, reasons: decision.reasons } })
+        throw new HttpError(403, 'access-denied', 'Sending to this GP practice is not permitted', { reasons: decision.reasons })
+      }
+
+      const practiceOds = patient.gp?.odsCode
+      const mailbox = practiceOds ? await adapters.mesh.lookupMailbox(practiceOds, SEND_DOCUMENT_WORKFLOW_ID) : null
+      if (!practiceOds || !mailbox) {
+        await audit.record({ ...base, outcome: 'failure', details: { title, error: 'send-document-not-supported' } })
+        throw new HttpError(
+          422,
+          'send-document-not-supported',
+          "The patient's GP practice cannot receive documents this way. Send your summary to the practice by another secure route.",
+        )
+      }
+
+      const bundle = buildSendDocumentBundle({
+        doc: { kind: req.body.kind, title, date: new Date().toISOString().slice(0, 10), summary: req.body.summary, medicines: req.body.medicines ?? [], adviceForGp: req.body.adviceForGp },
+        patient,
+        patientName: displayName(patient),
+        author: { user: actor.user, organisation: { odsCode: actor.org.odsCode, name: actor.org.name } },
+        recipientOdsCode: practiceOds,
+        messageId: crypto.randomUUID(),
+        now: new Date(),
+      })
+      let messageId: string
+      try {
+        ;({ messageId } = await adapters.mesh.send({
+          from: MIDDLEWARE.meshMailbox,
+          to: mailbox,
+          workflowId: SEND_DOCUMENT_WORKFLOW_ID,
+          localId: consent.id,
+          subject: title,
+          contentType: 'application/fhir+json',
+          content: bundle,
+        }))
+      } catch (err) {
+        await audit.record({ ...base, outcome: 'failure', details: { title, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' } })
+        throw err
+      }
+      // The middleware keeps no copy of the document: only this audit entry.
+      await audit.record({
+        ...base,
+        outcome: 'success',
+        details: { messageId, kind: req.body.kind, title, practice: practiceOds, workflowId: SEND_DOCUMENT_WORKFLOW_ID, medicines: req.body.medicines?.length ?? 0 },
+      })
+      return reply.code(201).send({ messageId, title, status: 'accepted', practice: { odsCode: practiceOds, name: practiceByOds(practiceOds)?.name ?? practiceOds } })
+    },
+  )
+
+  app.get<{ Params: { id: string } }>(
+    '/api/provider/consents/:id/documents',
+    { schema: { summary: 'Documents sent to the GP under this consent, with MESH delivery status', tags } },
+    async req => {
+      const actor = auth(req)
+      requireClinician(actor)
+      const consent = await ownConsent(actor, req.params.id)
+      const events = (await app.services.audit.forConsent(consent.id, { limit: 500 })).filter(
+        e => e.type === 'access.document.send' && e.outcome === 'success',
+      )
+      return Promise.all(
+        events.reverse().map(async e => {
+          const messageId = String(e.details?.messageId)
+          let status: Awaited<ReturnType<typeof app.services.adapters.mesh.status>> = null
+          try {
+            status = await app.services.adapters.mesh.status(messageId)
+          } catch {
+            // Status is best-effort; the send itself is recorded.
+          }
+          return {
+            messageId,
+            title: String(e.details?.title ?? ''),
+            kind: String(e.details?.kind ?? ''),
+            sentAt: e.recordedAt,
+            sentBy: providerUserById(e.actor.id)?.name ?? e.actor.id,
+            status: status?.status ?? 'unknown',
+            statusAt: status?.statusAt ?? null,
+            statusNote: status?.statusNote ?? null,
+          }
+        }),
+      )
     },
   )
 }

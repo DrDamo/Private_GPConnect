@@ -1,7 +1,7 @@
 // Errors every adapter implementation (mock or real) reports in the same way,
 // so callers handle a real PDS timeout exactly like a simulated one.
 
-export type AdapterName = 'pds' | 'sds' | 'nhs-login' | 'sms' | 'gp-connect'
+export type AdapterName = 'pds' | 'sds' | 'nhs-login' | 'sms' | 'gp-connect' | 'mesh'
 
 export type AdapterErrorCode =
   | 'not-found'
@@ -10,6 +10,7 @@ export type AdapterErrorCode =
   | 'unauthorised'
   | 'timeout'
   | 'unavailable'
+  | 'not-supported'
 
 export class AdapterError extends Error {
   readonly adapter: AdapterName

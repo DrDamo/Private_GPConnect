@@ -75,9 +75,9 @@ describe('grantConsent', () => {
     expect(r.decision).toMatchObject({ outcome: 'granted', assurance: 'nhs-login-p9' })
   })
 
-  it('with SMS narrows to view-only and caps the duration at 30 days', () => {
+  it('with SMS narrows to viewing and notifying the GP (no structured copy) and caps the duration at 30 days', () => {
     const r = grantConsent(pending(), smsDecision(), NOW)
-    expect(r.scope).toEqual({ actions: ['html.view'], htmlSections: ['SUM', 'MED', 'ALL'], clinicalAreas: [] })
+    expect(r.scope).toEqual({ actions: ['html.view', 'document.send'], htmlSections: ['SUM', 'MED', 'ALL'], clinicalAreas: [] })
     expect(r.expiresAt).toBe(days(30).toISOString())
   })
 

@@ -4,6 +4,7 @@ import { formatDate, formatDateTime } from '../../format'
 import Link from '../../Link'
 import { ErrorBox, SimNote } from '../../ui'
 import ProviderFrame from './ProviderFrame'
+import SendToGp from './SendToGp'
 import StructuredView from './StructuredView'
 import { REASON_TEXT, type ConsentSummary } from './types'
 
@@ -40,7 +41,7 @@ function Frame({ html }: { html: string }) {
 function Content({ consentId }: { consentId: string }) {
   const [consent, setConsent] = useState<ConsentSummary | null>(null)
   const [section, setSection] = useState<string | null>(null)
-  const [mode, setMode] = useState<'html' | 'structured'>('html')
+  const [mode, setMode] = useState<'html' | 'structured' | 'send' | null>(null)
   const [result, setResult] = useState<{ section: string; data?: SectionResponse; error?: { message: string; reasons?: string[] } } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -70,6 +71,8 @@ function Content({ consentId }: { consentId: string }) {
   const data = loading ? null : (result?.data ?? null)
   const error = loading ? null : (result?.error ?? null)
 
+  const activeMode = mode ?? (consent?.scope.actions.includes('html.view') ? 'html' : 'send')
+
   if (!consent) return loadError ? <ErrorBox>{loadError}</ErrorBox> : <p className="text-gray-600">Loading…</p>
 
   return (
@@ -84,23 +87,34 @@ function Content({ consentId }: { consentId: string }) {
         Consent until {formatDate(consent.expiresAt)} · {consent.purpose}. Every view is logged and visible to the patient.
       </p>
 
-      {consent.scope.actions.includes('structured.retrieve') && (
-        <div className="flex gap-4 border-b border-gray-300" role="tablist">
-          {(['html', 'structured'] as const).map(m => (
-            <button
-              key={m}
-              role="tab"
-              aria-selected={mode === m}
-              onClick={() => setMode(m)}
-              className={`-mb-px border-b-2 px-1 pb-2 font-semibold ${mode === m ? 'border-brand text-brand' : 'border-transparent text-gray-600'}`}
-            >
-              {m === 'html' ? 'View record' : 'Structured data'}
-            </button>
-          ))}
-        </div>
-      )}
+      {(() => {
+        const tabs = (
+          [
+            ['html', 'View record', 'html.view'],
+            ['structured', 'Structured data', 'structured.retrieve'],
+            ['send', 'Send to GP', 'document.send'],
+          ] as const
+        ).filter(([, , action]) => consent.scope.actions.includes(action))
+        return (
+          <div className="flex gap-4 border-b border-gray-300" role="tablist">
+            {tabs.map(([m, label]) => (
+              <button
+                key={m}
+                role="tab"
+                aria-selected={activeMode === m}
+                onClick={() => setMode(m)}
+                className={`-mb-px border-b-2 px-1 pb-2 font-semibold ${activeMode === m ? 'border-brand text-brand' : 'border-transparent text-gray-600'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
 
-      {mode === 'structured' ? (
+      {activeMode === 'send' ? (
+        <SendToGp consentId={consentId} />
+      ) :       activeMode === 'structured' ? (
         <StructuredView consentId={consentId} />
       ) : (
         <>

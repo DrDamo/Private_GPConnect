@@ -103,7 +103,7 @@ export default function ConsentReview({ id }: { id: string }) {
           <h3 className="text-lg font-semibold">Use a text message code instead</h3>
           <p className="text-sm text-gray-700">
             We will text a code to the mobile number your GP practice has for you. This is less secure, so you can only let the
-            provider <em>look at</em> your record, for up to 30 days.
+            provider <em>look at</em> your record (and tell your GP about any care they give you), for up to 30 days.
           </p>
           <Button variant="secondary" onClick={sendCode} disabled={busy}>
             Text me a code
@@ -251,7 +251,7 @@ function ConsentDetails({ consent, session, onChange }: { consent: ConsentView; 
         <>
           {consent.narrowedBySignIn && (
             <Notice>
-              Because you signed in with a text message code, you can only let them look at your record, for up to 30 days.
+              Because you signed in with a text message code, you can only let them look at your record and tell your GP about your care, for up to 30 days. They cannot copy your record into their own system.
               To agree to everything they asked for,{' '}
               <button
                 className="underline"

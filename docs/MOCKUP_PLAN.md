@@ -205,3 +205,11 @@ Private_GPConnect/
   - Failures are audited with the GP Connect code, and the patient's log says their practice didn't return the record.
   - The consent wording (now `2026-09-v2`) tells patients that a choice not to share, made at their practice, still applies. Our consent never overrides it.
   - **Still to verify:** the status and codes for malformed requests and JWTs (we assume 400 BAD_REQUEST and 422 INVALID_PARAMETER), and the 1.x (Structured) error shape.
+- [x] **Step 7:** GP Connect Send Document over simulated MESH.
+  - **Provider side:** the provider sends a supply/prescription notification (medicines with the dosage exactly as written) or a care summary to the patient's practice. It goes as an STU3 message Bundle (MessageHeader, DocumentReference, Binary, Patient, Practitioner, Organizations) over MESH.
+  - **Checks:** the policy decision point checks `document.send`, and the practice's MESH mailbox is looked up for the workflow. A practice that can't receive gets a clear message.
+  - **Pass-through:** the middleware keeps no copy of the document. The audit entry records only the MESH message id. The provider's "sent" list and delivery status are built from the audit trail plus MESH status.
+  - **Simulated practice inbox:** the practice reads the document (sanitised, in a sandboxed iframe), then files it or rejects it. That business acknowledgement shows up for the provider. The patient's log says what was sent to their GP.
+  - **Design decision (for the Clinical Safety Officer):** text-message consent now covers notifying the GP as well as viewing, because telling the GP is the safety-positive direction. It still excludes structured copying.
+  - **⚠ Unverified:** the Send Document Bundle structure, the MessageHeader event and the MESH workflow id (`GPFED_CONSULT_REPORT`). These need a real example.
+  - **Open question:** after consent is withdrawn, the provider can no longer notify the GP. Is that right, or should notifying the GP about care already given survive withdrawal?

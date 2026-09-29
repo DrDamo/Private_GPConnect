@@ -160,6 +160,10 @@ export class AuditLog {
     return this.store.list({ patientRef: this.patientRef(nhsNumber), limit: options.limit ?? 100, afterSeq: options.afterSeq })
   }
 
+  forConsent(consentId: string, options: { afterSeq?: number; limit?: number } = {}): Promise<AuditEvent[]> {
+    return this.store.list({ consentId, limit: options.limit ?? 200, afterSeq: options.afterSeq })
+  }
+
   verify(pageSize?: number): Promise<ChainVerification> {
     return verifyChain(this.store, pageSize)
   }
