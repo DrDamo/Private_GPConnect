@@ -131,6 +131,7 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
       const code = e.details?.section as HtmlSection | undefined
       const part = code && HTML_SECTION_LABELS[code] ? HTML_SECTION_LABELS[code].toLowerCase() : 'GP record'
       if (e.outcome === 'denied') return `${provider} tried to look at your ${part} but was not allowed`
+      if (e.details?.error === 'gp-connect-not-found') return `${provider} tried to look at your ${part}, but your GP practice's system did not return your record`
       if (failed) return `${provider} tried to look at your ${part} but your GP system could not be reached`
       return `${provider} looked at your ${part}`
     }
@@ -138,6 +139,7 @@ function describeEvent(e: AuditEvent, providerFor: (consentId?: string, ods?: st
       const areas = Array.isArray(e.details?.areas) ? (e.details.areas as string[]) : []
       const parts = areas.map(a => CLINICAL_AREA_LABELS[a as keyof typeof CLINICAL_AREA_LABELS] ?? a).join('; ')
       if (e.outcome === 'denied') return `${provider} tried to copy parts of your GP record but was not allowed`
+      if (e.details?.error === 'gp-connect-not-found') return `${provider} tried to copy parts of your GP record, but your GP practice's system did not return your record`
       if (failed) return `${provider} tried to copy parts of your GP record but your GP system could not be reached`
       return `${provider} copied these parts of your GP record into their records: ${parts}`
     }

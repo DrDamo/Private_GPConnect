@@ -24,6 +24,21 @@ const ADAPTER_STATUS: Record<AdapterError['code'], number> = {
   unavailable: 503,
 }
 
+/**
+ * Messages for errors people will see. GP Connect's PATIENT_NOT_FOUND is also
+ * returned when the patient has dissented to sharing at their practice, and the
+ * two are deliberately indistinguishable: never suggest which one it is, and
+ * never let "nothing returned" read as "nothing recorded".
+ */
+const ADAPTER_MESSAGES: Record<string, string> = {
+  'gp-connect-not-found':
+    "The GP practice's system did not return a record for this patient. This can happen when the practice does not hold " +
+    'their record, or when the patient has asked their practice not to share it. No information was returned: do not assume ' +
+    'the patient has no allergies, medicines or conditions.',
+  'gp-connect-timeout': 'The GP practice’s system did not respond in time. Try again shortly.',
+  'gp-connect-unavailable': 'The GP practice’s system is not available at the moment. Try again later.',
+}
+
 /** Maps domain errors to consistent JSON responses: { error, message, ...details }. */
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((err, req, reply) => {
@@ -36,9 +51,13 @@ export function registerErrorHandler(app: FastifyInstance) {
       return reply.code(409).send({ error: 'conflict', message: 'Someone else changed this at the same time. Please try again.' })
     }
     if (err instanceof AdapterError) {
-      return reply
-        .code(ADAPTER_STATUS[err.code])
-        .send({ error: `${err.adapter}-${err.code}`, message: err.message, retryable: err.retryable })
+      const key = `${err.adapter}-${err.code}`
+      return reply.code(ADAPTER_STATUS[err.code]).send({
+        error: key,
+        message: ADAPTER_MESSAGES[key] ?? err.message,
+        retryable: err.retryable,
+        ...(err.details?.gpConnectCode ? { gpConnectCode: err.details.gpConnectCode } : {}),
+      })
     }
     const e = err as { validation?: unknown; statusCode?: number; message?: string }
     if (e.validation) return reply.code(400).send({ error: 'invalid-request', message: e.message })

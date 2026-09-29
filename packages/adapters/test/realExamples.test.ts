@@ -6,6 +6,7 @@ import {
   buildCareRecordRequest,
   checkJwtClaims,
   decodeUnsignedJwt,
+  interpretGpConnectResponse,
   MockSds,
   parseCareRecordResponse,
   simulatedGpSystems,
@@ -113,7 +114,7 @@ describe('our simulated response matches the real one', () => {
     const real = parseCareRecordResponse(realResponse, 'ALL').html
     // Margaret Evans has a current allergy; Historical is empty in our data, so compare the current table fully
     const ex = await ourRequest('ALL', new Date())
-    const ours = parseCareRecordResponse(await simulatedGpSystems()(ex), 'ALL').html
+    const ours = parseCareRecordResponse(interpretGpConnectResponse(await simulatedGpSystems()(ex)), 'ALL').html
     const r = headingsAndTables(real)
     const o = headingsAndTables(ours)
     expect(o.h1).toEqual(r.h1)
@@ -126,7 +127,7 @@ describe('our simulated response matches the real one', () => {
 
   it('bundle: same Composition shape and the same supporting resources with fullUrls', async () => {
     const ex = await ourRequest('ALL', new Date())
-    const ours = await simulatedGpSystems()(ex)
+    const ours = interpretGpConnectResponse(await simulatedGpSystems()(ex))
     const comp = (b: fhir3.Bundle) => b.entry!.find(e => (e.resource as fhir3.FhirResource).resourceType === 'Composition')!.resource!
     const compKeys = (b: fhir3.Bundle) => Object.keys(comp(b)).sort()
     expect(compKeys(ours)).toEqual(compKeys(realResponse))
@@ -145,7 +146,7 @@ describe('second real Allergies example: no current, one historical', () => {
     const patient = PATIENTS.find(p => p.nhsNumber === nhsNumber)!
     const endpoint = (await new MockSds().getGpConnectEndpoint(patient.gpOdsCode))!
     const ex = buildCareRecordRequest({ nhsNumber, section: 'ALL', endpoint, requester, consumer: MIDDLEWARE, traceId: 't', now: new Date() })
-    return parseCareRecordResponse(await simulatedGpSystems()(ex), 'ALL').html
+    return parseCareRecordResponse(interpretGpConnectResponse(await simulatedGpSystems()(ex)), 'ALL').html
   }
 
   it('our empty "current" block is character-for-character the real one', async () => {
@@ -163,5 +164,48 @@ describe('second real Allergies example: no current, one historical', () => {
   it('the whole section has the same overall skeleton as the real one', async () => {
     const strip = (html: string) => html.replace(/(<td[^>]*>)[^<]*(<\/td>)/g, '$1$2')
     expect(strip(await ourAllergies('9990000115'))).toBe(strip(real2))
+  })
+})
+
+describe('real PATIENT_NOT_FOUND (also returned when the patient has dissented to sharing)', () => {
+  const real404 = JSON.parse(readFileSync(new URL('demonstrator-0.7.2-PATIENT_NOT_FOUND.response.json', dir), 'utf8')) as {
+    status: number
+    headers: Record<string, string>
+    body: unknown
+  }
+
+  async function simulatedResponse(nhsNumber: string) {
+    const patient = PATIENTS.find(p => p.nhsNumber === nhsNumber)!
+    const endpoint = (await new MockSds().getGpConnectEndpoint(patient.gpOdsCode))!
+    const ex = buildCareRecordRequest({ nhsNumber, section: 'SUM', endpoint, requester, consumer: MIDDLEWARE, traceId: 't', now: new Date() })
+    return simulatedGpSystems()(ex)
+  }
+
+  it.each([
+    ['record not held at the practice', '9990000174'],
+    ['patient has dissented at the practice', '9990000182'],
+  ])('%s: our 404 is exactly the real one', async (_, nhsNumber) => {
+    const res = await simulatedResponse(nhsNumber)
+    expect(res.status).toBe(real404.status)
+    expect(res.headers['content-type']).toBe(real404.headers['content-type'])
+    expect(res.body).toEqual(real404.body)
+  })
+
+  it('"not held" and "dissented" are indistinguishable to the consumer', async () => {
+    expect(await simulatedResponse('9990000174')).toEqual(await simulatedResponse('9990000182'))
+  })
+
+  it('our client turns the real OperationOutcome into a non-retryable not-found error with its details', () => {
+    try {
+      interpretGpConnectResponse(real404)
+      throw new Error('should have thrown')
+    } catch (err) {
+      expect(err).toMatchObject({
+        adapter: 'gp-connect',
+        code: 'not-found',
+        retryable: false,
+        details: { httpStatus: 404, gpConnectCode: 'PATIENT_NOT_FOUND', diagnostics: 'Patient Record Not Found' },
+      })
+    }
   })
 })

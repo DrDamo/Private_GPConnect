@@ -4,6 +4,7 @@ import { clinicalRecordFor, PATIENTS, PRACTICES, type SimPatient, type SimPracti
 import { AdapterError } from '../errors'
 import {
   checkJwtClaims,
+  gpConnectOperationOutcome,
   decodeUnsignedJwt,
   ODS_CODE_SYSTEM,
   GPC_NHS_NUMBER_SYSTEM,
@@ -21,8 +22,26 @@ import { structuredBundleFor } from './structuredRecord'
 // the way a real producer and the Spine Secure Proxy would, so mistakes in our
 // JWT or headers fail here rather than on first contact with a real system.
 
+/** A GP Connect error the simulated producer returns as an OperationOutcome. */
+class ProducerError extends Error {
+  readonly status: number
+  readonly issueCode: string
+  readonly gpConnectCode: string
+  constructor(status: number, issueCode: string, gpConnectCode: string, diagnostics: string) {
+    super(diagnostics)
+    this.status = status
+    this.issueCode = issueCode
+    this.gpConnectCode = gpConnectCode
+  }
+}
+
+// PATIENT_NOT_FOUND (404) is confirmed by a real example. ⚠ The status and
+// codes for malformed requests and JWTs (400 BAD_REQUEST, 422
+// INVALID_PARAMETER) are our reading of the specification, not yet confirmed.
 const fail = (code: 'invalid-request' | 'unauthorised' | 'not-found', message: string): never => {
-  throw new AdapterError('gp-connect', code, message)
+  if (code === 'not-found') throw new ProducerError(404, 'not-found', 'PATIENT_NOT_FOUND', 'Patient Record Not Found')
+  if (code === 'unauthorised') throw new ProducerError(400, 'invalid', 'BAD_REQUEST', message)
+  throw new ProducerError(/parameter|recordSection|clinical area/i.test(message) ? 422 : 400, 'invalid', /parameter|recordSection|clinical area/i.test(message) ? 'INVALID_PARAMETER' : 'BAD_REQUEST', message)
 }
 
 function validateCommon(ex: GpConnectExchange, practice: SimPractice, now: Date, interactionId: string): GpConnectJwtClaims {
@@ -159,18 +178,34 @@ export function simulatedGpSystems(
   return async exchange => {
     const host = new URL(exchange.url).hostname
     const practice = practices.find(p => host === `${p.odsCode.toLowerCase()}.gpconnect.sim.invalid`)
+    // Transport-level: nothing answers at this address.
     if (!practice || !practice.gpConnectEnabled) throw new AdapterError('gp-connect', 'unavailable', 'No GP Connect service at this address')
     const now = clock()
+    const structured = exchange.headers['Ssp-InteractionID'] === INTERACTION_GET_STRUCTURED_RECORD
+    const version = structured ? '1.x' : '0.7'
+    const contentType = structured ? 'application/fhir+json;charset=UTF-8' : 'application/json+fhir;charset=UTF-8'
     const findPatient = (nhsNumber: string) => {
-      const patient = patients.find(p => p.nhsNumber === nhsNumber && p.gpOdsCode === practice.odsCode)
-      if (!patient) throw new AdapterError('gp-connect', 'not-found', 'Patient not found at this practice')
+      const patient = patients.find(p => p.nhsNumber === nhsNumber && p.gpOdsCode === practice.odsCode && (p.gpRecordAtPractice ?? 'held') === 'held')
+      if (!patient) return fail('not-found', 'Patient Record Not Found')
       return patient
     }
-    if (exchange.headers['Ssp-InteractionID'] === INTERACTION_GET_STRUCTURED_RECORD) {
-      const { nhsNumber, areas } = validateStructured(exchange, practice, now)
-      return structuredBundleFor(findPatient(nhsNumber), practice, areas)
+    try {
+      let body: fhir3.Bundle
+      if (structured) {
+        const { nhsNumber, areas } = validateStructured(exchange, practice, now)
+        body = structuredBundleFor(findPatient(nhsNumber), practice, areas)
+      } else {
+        const { nhsNumber, section } = validateHtml(exchange, practice, now)
+        body = renderBundle(findPatient(nhsNumber), practice, section, now)
+      }
+      return { status: 200, headers: { 'content-type': contentType }, body }
+    } catch (err) {
+      if (!(err instanceof ProducerError)) throw err
+      return {
+        status: err.status,
+        headers: { 'content-type': contentType },
+        body: gpConnectOperationOutcome(version, { issueCode: err.issueCode, gpConnectCode: err.gpConnectCode, diagnostics: err.message }),
+      }
     }
-    const { nhsNumber, section } = validateHtml(exchange, practice, now)
-    return renderBundle(findPatient(nhsNumber), practice, section, now)
   }
 }

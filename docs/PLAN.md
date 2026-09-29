@@ -83,6 +83,7 @@ When a provider has viewed or imported GP data, withdrawing consent stops **futu
 - **Deceased patients.** Exclude.
 - **Patients not currently GP-registered in England, or at practices without GP Connect enabled.** Fail gracefully with a clear message.
 - **Sensitive-data exclusions.** Rely on the GP Connect producer's existing exclusions and don't try to re-filter. Document the reliance in the hazard log.
+- **Patients who have dissented at their GP practice.** GP Connect returns the same `PATIENT_NOT_FOUND` as when no record is held (confirmed by the GP Connect team). Consent given through this service can't override the practice-level choice. Tell patients this in the consent wording. The provider message must not hint at which cause applies, and must never let "no record returned" read as "nothing recorded". This belongs in the hazard log.
 
 ### 2.7 Middleware role
 Decide early whether you are a **data processor for each provider** (recommended) or a controller. Build to a **pass-through, no-persistence** model for clinical content: don't cache GP records at rest. This shrinks the security and IG burden a great deal.

@@ -8,7 +8,7 @@ import type { AssuranceLevel } from './types'
 // consent record so the server can re-create and hash what was shown; the
 // version and hash are stored as evidence with the decision.
 
-export const CONSENT_TEXT_VERSION = '2026-09-v1'
+export const CONSENT_TEXT_VERSION = '2026-09-v2'
 
 const unique = (items: string[]) => [...new Set(items)]
 
@@ -44,6 +44,7 @@ export function renderConsentText(record: ConsentRecord, assurance: AssuranceLev
     `This lasts for ${offer.durationDays} days unless you withdraw it sooner. You can withdraw at any time.`,
     `Withdrawing stops any further access. It does not remove information they have already seen or copied into their own records.`,
     `Every time they look at your record it is logged, and you can see the log.`,
+    `If you have asked your GP practice not to share your record, that choice still applies and they will not be able to see it.`,
   ].join('\n')
 }
 

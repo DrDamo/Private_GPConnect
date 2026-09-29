@@ -7,6 +7,7 @@ import {
   decodeUnsignedJwt,
   encodeUnsignedJwt,
   GpConnectHtmlClient,
+  interpretGpConnectResponse,
   MockSds,
   simulatedGpSystems,
   type GpConnectExchange,
@@ -110,7 +111,7 @@ describe('simulated producer validates requests like a real one', () => {
   })
 
   it('accepts a well-formed request', async () => {
-    await expect(transport(await good())).resolves.toMatchObject({ resourceType: 'Bundle' })
+    await expect(transport(await good())).resolves.toMatchObject({ status: 200, body: { resourceType: 'Bundle' } })
   })
 
   it.each([
@@ -127,8 +128,8 @@ describe('simulated producer validates requests like a real one', () => {
       /requested_record/,
     ],
   ])('rejects %s', async (_, mutate, message) => {
-    await expect(transport(mutate(await good()))).rejects.toSatisfy(
-      (e: unknown) => e instanceof AdapterError && message.test(e.message),
-    )
+    const res = await transport(mutate(await good()))
+    expect(res.status).toBe(400)
+    expect(() => interpretGpConnectResponse(res)).toThrow(message)
   })
 })

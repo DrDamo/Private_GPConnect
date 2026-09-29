@@ -435,7 +435,11 @@ export async function providerRoutes(app: FastifyInstance) {
         await audit.record({
           ...base,
           outcome: 'failure',
-          details: { section, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' },
+          details: {
+            section,
+            error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected',
+            ...(err instanceof AdapterError && err.details?.gpConnectCode ? { gpConnectCode: err.details.gpConnectCode } : {}),
+          },
         })
         throw err
       }
@@ -500,7 +504,15 @@ export async function providerRoutes(app: FastifyInstance) {
           traceId: String(req.id),
         })
       } catch (err) {
-        await audit.record({ ...base, outcome: 'failure', details: { areas, error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected' } })
+        await audit.record({
+          ...base,
+          outcome: 'failure',
+          details: {
+            areas,
+            error: err instanceof AdapterError ? `${err.adapter}-${err.code}` : 'unexpected',
+            ...(err instanceof AdapterError && err.details?.gpConnectCode ? { gpConnectCode: err.details.gpConnectCode } : {}),
+          },
+        })
         throw err
       }
       const { record, exchange } = result

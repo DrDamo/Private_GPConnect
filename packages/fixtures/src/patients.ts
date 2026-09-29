@@ -24,6 +24,14 @@ export interface SimPatient {
   /** Patient has an NHS login account, and at what identity level. */
   nhsLogin?: { sub: string; identityProofingLevel: 'P9' | 'P5' }
   recordProfile: RecordProfile
+  /**
+   * Whether the practice's GP system will return the record over GP Connect
+   * (default 'held'). 'not-held': the record isn't there (yet). 'dissent': the
+   * patient has asked the practice not to share it. GP Connect returns the same
+   * PATIENT_NOT_FOUND (404) for both, deliberately, so a consumer can't tell
+   * which, and nor should this service.
+   */
+  gpRecordAtPractice?: 'held' | 'not-held' | 'dissent'
   scenario: string
   tags: string[]
 }
@@ -217,6 +225,40 @@ export const PATIENTS: SimPatient[] = [
     recordProfile: 'standard',
     scenario: 'Has an NHS login account that is only verified to P5, which is not enough to give consent.',
     tags: ['nhs-login-p5'],
+  },
+  {
+    nhsNumber: '9990000174',
+    name: { prefix: 'Ms', given: ['Nadia'], family: 'Rahman' },
+    gender: 'female',
+    birthDate: '1992-11-30',
+    confidentiality: 'U',
+    address: { line: ['7 Transfer Terrace'], city: 'Norwich', postalCode: 'NR3 2DE' },
+    mobile: '07700900016',
+    gpOdsCode: 'SIMGP3',
+    gpRegisteredSince: '2026-09-27',
+    nhsLogin: { sub: 'sim-nhslogin-0016', identityProofingLevel: 'P9' },
+    recordProfile: 'minimal',
+    gpRecordAtPractice: 'not-held',
+    scenario:
+      "PDS shows a new practice, but that practice's GP system doesn't hold her record yet: GP Connect returns PATIENT_NOT_FOUND (404).",
+    tags: ['gp-record-not-found'],
+  },
+  {
+    nhsNumber: '9990000182',
+    name: { prefix: 'Mr', given: ['Owen'], family: 'Clarke' },
+    gender: 'male',
+    birthDate: '1978-04-18',
+    confidentiality: 'U',
+    address: { line: ['15 Choice Crescent'], city: 'Leeds', postalCode: 'LS4 2FG' },
+    mobile: '07700900017',
+    gpOdsCode: 'SIMGP1',
+    gpRegisteredSince: '2011-08-08',
+    nhsLogin: { sub: 'sim-nhslogin-0017', identityProofingLevel: 'P9' },
+    recordProfile: 'standard',
+    gpRecordAtPractice: 'dissent',
+    scenario:
+      'Has told his GP practice not to share his record. He can still consent here, but the practice\'s choice wins: GP Connect returns PATIENT_NOT_FOUND, exactly as when no record is held.',
+    tags: ['gp-sharing-dissent', 'gp-record-not-found'],
   },
   {
     nhsNumber: '9990000158',

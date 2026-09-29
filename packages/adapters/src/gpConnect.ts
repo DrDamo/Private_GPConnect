@@ -268,8 +268,68 @@ export function parseCareRecordResponse(bundle: fhir3.Bundle, section: HtmlSecti
   }
 }
 
-/** Sends a built request and returns the response Bundle (or throws AdapterError). */
-export type GpConnectTransport = (exchange: GpConnectExchange) => Promise<fhir3.Bundle>
+/** An HTTP response from a GP system (or the Spine Secure Proxy). */
+export interface GpConnectResponse {
+  status: number
+  headers: Record<string, string>
+  body: unknown
+}
+
+/**
+ * Sends a built request and returns the HTTP response. Throws AdapterError
+ * only for transport-level failures (no service, timeout); a GP system's own
+ * errors come back as OperationOutcome bodies.
+ */
+export type GpConnectTransport = (exchange: GpConnectExchange) => Promise<GpConnectResponse>
+
+// 0.7.x error OperationOutcome (confirmed by a real PATIENT_NOT_FOUND example).
+export const GPC_07_ERROR_SYSTEM = 'http://fhir.nhs.net/ValueSet/gpconnect-error-or-warning-code-1'
+export const GPC_07_OO_PROFILE = 'http://fhir.nhs.net/StructureDefinition/gpconnect-operationoutcome-1'
+// ⚠ 1.x (STU3) equivalents: unverified.
+export const GPC_1X_ERROR_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/Spine-ErrorOrWarningCode-1'
+export const GPC_1X_OO_PROFILE = 'https://fhir.nhs.uk/STU3/StructureDefinition/GPConnect-OperationOutcome-1'
+
+export function gpConnectOperationOutcome(
+  version: GpcVersion,
+  e: { issueCode: string; gpConnectCode: string; diagnostics: string },
+): fhir3.OperationOutcome {
+  const v07 = version === '0.7'
+  return {
+    resourceType: 'OperationOutcome',
+    meta: { profile: [v07 ? GPC_07_OO_PROFILE : GPC_1X_OO_PROFILE] },
+    issue: [
+      {
+        severity: 'error',
+        code: e.issueCode as fhir3.OperationOutcomeIssue['code'],
+        details: { coding: [{ system: v07 ? GPC_07_ERROR_SYSTEM : GPC_1X_ERROR_SYSTEM, code: e.gpConnectCode, display: e.gpConnectCode }] },
+        diagnostics: e.diagnostics,
+      },
+    ],
+  }
+}
+
+const STATUS_TO_CODE = (status: number): AdapterError['code'] =>
+  status === 404 ? 'not-found' : status === 401 || status === 403 ? 'unauthorised' : status >= 500 ? 'unavailable' : 'invalid-request'
+
+/**
+ * Turns a GP system response into a Bundle, or an AdapterError that carries
+ * the GP Connect error code and diagnostics from the OperationOutcome.
+ */
+export function interpretGpConnectResponse(res: GpConnectResponse): fhir3.Bundle {
+  const body = res.body as { resourceType?: string } | null
+  if (res.status >= 200 && res.status < 300 && body?.resourceType === 'Bundle') return body as fhir3.Bundle
+  if (body?.resourceType === 'OperationOutcome') {
+    const issue = (body as fhir3.OperationOutcome).issue?.[0]
+    const gpConnectCode = issue?.details?.coding?.[0]?.code ?? 'UNKNOWN'
+    const diagnostics = issue?.diagnostics ?? ''
+    throw new AdapterError('gp-connect', STATUS_TO_CODE(res.status), `${gpConnectCode}${diagnostics ? `: ${diagnostics}` : ''}`, {
+      httpStatus: res.status,
+      gpConnectCode,
+      ...(diagnostics ? { diagnostics } : {}),
+    })
+  }
+  throw new AdapterError('gp-connect', STATUS_TO_CODE(res.status || 502), `Unexpected response (HTTP ${res.status})`, { httpStatus: res.status })
+}
 
 export interface GpConnectHtmlAdapter {
   getCareRecord(input: {
@@ -293,7 +353,7 @@ export class GpConnectHtmlClient implements GpConnectHtmlAdapter {
 
   async getCareRecord(input: Parameters<GpConnectHtmlAdapter['getCareRecord']>[0]) {
     const exchange = buildCareRecordRequest({ ...input, consumer: this.consumer, now: this.clock() })
-    const bundle = await this.transport(exchange)
+    const bundle = interpretGpConnectResponse(await this.transport(exchange))
     return { record: parseCareRecordResponse(bundle, input.section), exchange }
   }
 }

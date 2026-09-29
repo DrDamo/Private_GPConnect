@@ -16,12 +16,15 @@ export class AdapterError extends Error {
   readonly code: AdapterErrorCode
   /** Transient failures are worth retrying; the others are not. */
   readonly retryable: boolean
+  /** What the remote system said, e.g. { httpStatus: 404, gpConnectCode: 'PATIENT_NOT_FOUND', diagnostics: '…' }. */
+  readonly details?: Record<string, string | number>
 
-  constructor(adapter: AdapterName, code: AdapterErrorCode, message: string) {
+  constructor(adapter: AdapterName, code: AdapterErrorCode, message: string, details?: Record<string, string | number>) {
     super(`${adapter}: ${message}`)
     this.name = 'AdapterError'
     this.adapter = adapter
     this.code = code
     this.retryable = code === 'timeout' || code === 'unavailable'
+    this.details = details
   }
 }

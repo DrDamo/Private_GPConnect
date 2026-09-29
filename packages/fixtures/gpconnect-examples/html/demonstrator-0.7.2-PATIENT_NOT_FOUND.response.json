@@ -1,0 +1,31 @@
+{
+  "status": 404,
+  "headers": {
+    "content-type": "application/json+fhir;charset=UTF-8",
+    "x-powered-by": "HAPI FHIR 2.2 REST Server (FHIR Server; FHIR 1.0.2/DSTU2)"
+  },
+  "body": {
+    "resourceType": "OperationOutcome",
+    "meta": {
+      "profile": [
+        "http://fhir.nhs.net/StructureDefinition/gpconnect-operationoutcome-1"
+      ]
+    },
+    "issue": [
+      {
+        "severity": "error",
+        "code": "not-found",
+        "details": {
+          "coding": [
+            {
+              "system": "http://fhir.nhs.net/ValueSet/gpconnect-error-or-warning-code-1",
+              "code": "PATIENT_NOT_FOUND",
+              "display": "PATIENT_NOT_FOUND"
+            }
+          ]
+        },
+        "diagnostics": "Patient Record Not Found"
+      }
+    ]
+  }
+}

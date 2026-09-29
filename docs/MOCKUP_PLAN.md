@@ -199,3 +199,9 @@ Private_GPConnect/
   - Simulated responses now carry the real Composition shape (profile, class, author, `fullUrl` entries for Practitioner, Organization and Patient) and `class="date-column"` on date cells.
   - The sanitiser is checked to keep all real content, with only `xmlns` dropped, and to strip scripts, handlers, links, images, styles and iframes.
   - **Still to verify:** the 1.x (Structured) JWT `aud` and the SDS job role code a real consumer should send.
+- [x] **Real error responses** (29 Sep 2026). A real `PATIENT_NOT_FOUND` OperationOutcome (HTTP 404) is kept as a reference fixture. The simulated GP system now returns GP Connect errors as OperationOutcome responses, and its 404 is identical to the real one. The GP Connect team confirmed that **the same response is returned when the patient has dissented to sharing**, so:
+  - The two causes are indistinguishable. Test patients cover both (record not held; dissented), and tests show the provider gets byte-identical responses.
+  - The provider message is neutral, names both possibilities, and warns that no information returned doesn't mean no allergies, medicines or conditions. It isn't retryable.
+  - Failures are audited with the GP Connect code, and the patient's log says their practice didn't return the record.
+  - The consent wording (now `2026-09-v2`) tells patients that a choice not to share, made at their practice, still applies. Our consent never overrides it.
+  - **Still to verify:** the status and codes for malformed requests and JWTs (we assume 400 BAD_REQUEST and 422 INVALID_PARAMETER), and the 1.x (Structured) error shape.

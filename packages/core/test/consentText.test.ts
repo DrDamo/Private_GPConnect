@@ -14,6 +14,7 @@ describe('renderConsentText', () => {
     expect(text).toContain('Summary, Medicines, Allergies')
     expect(text).toContain('This lasts for 90 days')
     expect(text).toContain('does not remove information they have already seen')
+    expect(text).toContain('If you have asked your GP practice not to share your record, that choice still applies')
   })
 
   it('reflects the narrower offer for a text-message sign-in', () => {

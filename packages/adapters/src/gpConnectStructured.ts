@@ -1,7 +1,7 @@
 import type * as fhir3 from 'fhir/r3'
 import type { ClinicalArea } from '@pgpc/core'
 import { AdapterError } from './errors'
-import { buildJwtClaims, spineHeaders, type Consumer, type GpConnectExchange, type Requester } from './gpConnect'
+import { buildJwtClaims, interpretGpConnectResponse, spineHeaders, type Consumer, type GpConnectExchange, type GpConnectTransport, type Requester } from './gpConnect'
 import type { GpConnectEndpoint } from './sds'
 
 // GP Connect Access Record: Structured ($gpc.getstructuredrecord, FHIR STU3).
@@ -168,10 +168,10 @@ export interface GpConnectStructuredAdapter {
 }
 
 export class GpConnectStructuredClient implements GpConnectStructuredAdapter {
-  private readonly transport: (exchange: GpConnectExchange) => Promise<fhir3.Bundle>
+  private readonly transport: GpConnectTransport
   private readonly consumer: Consumer
   private readonly clock: () => Date
-  constructor(transport: (exchange: GpConnectExchange) => Promise<fhir3.Bundle>, consumer: Consumer, clock: () => Date = () => new Date()) {
+  constructor(transport: GpConnectTransport, consumer: Consumer, clock: () => Date = () => new Date()) {
     this.transport = transport
     this.consumer = consumer
     this.clock = clock
@@ -180,7 +180,7 @@ export class GpConnectStructuredClient implements GpConnectStructuredAdapter {
   async getStructuredRecord(input: Parameters<GpConnectStructuredAdapter['getStructuredRecord']>[0]) {
     if (input.areas.length === 0) throw new AdapterError('gp-connect', 'invalid-request', 'At least one clinical area is required')
     const exchange = buildStructuredRecordRequest({ ...input, consumer: this.consumer, now: this.clock() })
-    const bundle = await this.transport(exchange)
+    const bundle = interpretGpConnectResponse(await this.transport(exchange))
     return { record: parseStructuredResponse(bundle, input.areas), exchange }
   }
 }
